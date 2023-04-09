@@ -1,0 +1,22 @@
+TMS9918 60Hz
+
+Display enabled:
+       12ts 14ts 17ts 19ts 20ts 22ts 29ts
+T1     OK   OK   OK   OK   OK   OK   OK
+G1     69%  73%  84%  90%  91%  93%  OK
+G2     69%  73%  84%  91%  91%  93%  OK
+MC     69%  72%  84%  90%  91%  93%  OK
+
+Display disabled:
+       12ts 14ts 17ts 19ts 20ts 22ts 29ts
+T1     OK   OK   OK   OK   OK   OK   OK
+G1     OK   OK   OK   OK   OK   OK   OK
+G2     OK   OK   OK   OK   OK   OK   OK
+MC     OK   OK   OK   OK   OK   OK   OK
+
+Sprites 'disabled' (magic Y), display enabled
+       12ts 14ts 17ts 19ts 20ts 22ts 29ts
+T1     OK   OK   OK   OK   OK   OK   OK
+G1     69%  72%  84%  91%  90%  93%  OK
+G2     68%  73%  84%  90%  91%  93%  OK
+MC     68%  72%  84%  90%  91%  93%  OK

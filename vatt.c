@@ -13,13 +13,14 @@
 #include "vdp_reg.h"
 #include "game_menu.h"
 #include "fsm.h"
+#include "fill.h"
 
 //=============================================================================
 // DEFINES
 //=============================================================================
 
 // Version
-#define APP_VERSION "0.4"
+#define APP_VERSION "0.5"
 
 // Library's logo
 #define MSX_GL "\x01\x02\x03\x04\x05\x06"
@@ -53,15 +54,6 @@ const c8* MenuAction_Time(u8 op, i8 value);
 const c8* MenuAction_Count(u8 op, i8 value);
 const c8* MenuAction_Test(u8 op, i8 value);
 
-// VRAM fill functions prototypes
-void Fill_12(u8 value);				// Fill VRAM - 12 T-States - out(n),a
-void Fill_14(u8 value);				// Fill VRAM - 14 T-States - out(c),a
-void Fill_17(u8 value);				// Fill VRAM - 17 T-States - out(n),a; nop
-void Fill_19(u8 value);				// Fill VRAM - 19 T-States - out(c),a; nop
-void Fill_20(u8 value);				// Fill VRAM - 20 T-States - out(n),a; or 0
-void Fill_22(u8 value);				// Fill VRAM - 22 T-States - out(n),a; nop; nop
-void Fill_29(u8 value);				// Fill VRAM - 29 T-States - out(n),a; or 0; djnz
-
 // State functions prototypes
 void State_Menu_Begin();
 void State_Menu_Update();
@@ -81,6 +73,7 @@ const struct FillTime g_Time[] =
 	{ "12ts", "12 TS - out(n),a",             Fill_12 },
 	{ "14ts", "14 TS - out(c),a",             Fill_14 },
 	{ "17ts", "17 TS - out(n),a; nop",        Fill_17 },
+	// { "18ts", "18 TS - outi",                 Fill_18 },
 	{ "19ts", "19 TS - out(c),a; nop",        Fill_19 },
 	{ "20ts", "20 TS - out(n),a; or 0",       Fill_20 },
 	{ "22ts", "22 TS - out(n),a; nop; nop",   Fill_22 },
@@ -212,14 +205,13 @@ const c8* GetMSXVersion(u8 ver)
 {
 	switch(ver)
 	{
-	// case 0:  return "MSX 1";
-	// case 1:  return "MSX 2";
-	// case 2:  return "MSX 2+";
-	// case 3:  return "MSX turbo R";
-	case 0:  return "TMS9918";
-	case 1:  return "V9938";
-	case 2:  return "V9958";
-	case 3:  return "V9958";
+	case 0: // MSX 1
+		return "TMS9918";
+	case 1: // MSX 2
+		return "V9938";
+	case 2: // MSX 2+
+	case 3: // MSX turbo R
+		return "V9958";
 	}
 	return "Unknow";
 }
@@ -230,122 +222,14 @@ const c8* GetVDPVersion()
 {
 	switch(g_VDP)
 	{
-	case VDP_VERSION_TMS9918A: return "TMS9918";
-	case VDP_VERSION_V9938:    return "V9938";
-	case VDP_VERSION_V9958:    return "V9958";
+	case VDP_VERSION_TMS9918A:
+		return "TMS9918";
+	case VDP_VERSION_V9938:
+		return "V9938";
+	case VDP_VERSION_V9958:
+		return "V9958";
 	}
 	return "Unknow";
-}
-
-//-----------------------------------------------------------------------------
-// Dummy assembler function
-void SetWriteVRAM(u16 dest)
-{
-	dest; // HL
-	__asm
-		// Setup destination address (LSB)
-		ld		a, l
-		out		(P_VDP_ADDR), a			// RegPort = (dest & 0x00FF);
-
-		// Setup destination address (MSB)
-		ld		a, h
-		and		a, #0x3F				// reset 2 MSB bits
-		or		a, #F_VDP_WRIT			// add write flag
-		out		(P_VDP_ADDR), a			// RegPort = ((dest >> 8) & 0x3F) + F_VDP_WRIT;
-	__endasm;
-}
-
-//-----------------------------------------------------------------------------
-// Fill VRAM - 12 T-States - out(n),a
-void Fill_12(u8 value)
-{
-	value; // A
-	__asm
-		.rept FILL_COUNT
-		out		(P_VDP_DATA), a			// 12 ts
-		.endm
-	__endasm;
-}
-
-//-----------------------------------------------------------------------------
-// Fill VRAM - 14 T-States - out(c),a
-void Fill_14(u8 value)
-{
-	value; // A
-	__asm
-		ld		c, #P_VDP_DATA
-		.rept FILL_COUNT
-		out		(c), a					// 14 ts
-		.endm
-	__endasm;
-}
-
-//-----------------------------------------------------------------------------
-// Fill VRAM - 17 T-States - out(n),a; nop
-void Fill_17(u8 value)
-{
-	value; // A
-	__asm
-		.rept FILL_COUNT
-		out		(P_VDP_DATA), a			// 12 ts
-		nop								//  5 ts
-		.endm
-	__endasm;
-}
-
-//-----------------------------------------------------------------------------
-// Fill VRAM - 19 T-States - out(c),a; nop
-void Fill_19(u8 value)
-{
-	value; // A
-	__asm
-		ld		c, #P_VDP_DATA
-		.rept FILL_COUNT
-		out		(c), a					// 14 ts
-		nop								//  5 ts
-		.endm
-	__endasm;
-}
-
-//-----------------------------------------------------------------------------
-// Fill VRAM - 20 T-States - out(n),a; or 0
-void Fill_20(u8 value)
-{
-	value; // A
-	__asm
-		.rept FILL_COUNT
-		out		(P_VDP_DATA), a			// 12 ts
-		or		#0						//  8 ts
-		.endm
-	__endasm;
-}
-
-//-----------------------------------------------------------------------------
-// Fill VRAM - 22 T-States - out(n),a; nop; nop
-void Fill_22(u8 value)
-{
-	value; // A
-	__asm
-		.rept FILL_COUNT
-		out		(P_VDP_DATA), a			// 12 ts
-		nop								//  5 ts
-		nop								//  5 ts
-		.endm
-	__endasm;
-}
-
-//-----------------------------------------------------------------------------
-// Fill VRAM - 29 T-States - out(n),a; or 0; djnz
-void Fill_29(u8 value)
-{
-	value; // A
-	__asm
-		ld		b, #0
-	fill29:
-		out		(P_VDP_DATA), a			// 12 ts
-		or		#0						//  8 ts
-		djnz	fill29					//  9 ts
-	__endasm;
 }
 
 //-----------------------------------------------------------------------------
@@ -370,42 +254,42 @@ void Test(u8 mode, u8 time)
 
 	// Init value
 	u16 total = 0;
-	u8 min = 255;
-	u8 max = 0;
+	u16 min = 256;
+	u16 max = 0;
 	u8 itNum = 1 << g_IterationCount; // Compute iteration number
 
 	for(u8 j = 0; j < itNum; ++j)
 	{
 		// Write reference
 		DisableInterrupt();
-		u16 addr = g_DestAddr;
-		SetWriteVRAM(addr);
+		SetWriteVRAM(g_DestAddr);
 		Fill_29(0x09);
 
 		// Test the given writing function
-		SetWriteVRAM(addr);
+		SetWriteVRAM(g_DestAddr);
 		g_Time[time].Function(0x0A);
 		EnableInterrupt();
 
 		// Check result
+		u16 addr = g_DestAddr;
 		u16 count = 0;
 		for(u16 i = 0; i < 256; ++i)
 			if(VDP_Peek_16K(addr++) == 0x0A)
 				count++;
 
-		// Compute percentage and store total, min and max
-		u8 percent = (u8)((count * 100) / 256);
-		total += percent;
-		if(percent < min)
-			min = percent;
-		if(percent > max)
-			max = percent;
+		// Store total, min and max
+		total += count;
+		if(count < min)
+			min = count;
+		if(count > max)
+			max = count;
 	}
-	total >>= g_IterationCount; // Scale down the total to get the average
+
+	total = (u16)((u32)total * 100 / 256) >> g_IterationCount; // Scale down the total to get the average
 
 	g_ReportAve[time][mode] = (u8)total;
-	g_ReportMin[time][mode] = min;
-	g_ReportMax[time][mode] = max;
+	g_ReportMin[time][mode] = (u8)(100 * min / 256);
+	g_ReportMax[time][mode] = (u8)(100 * max / 256);
 
 	if(g_VDP == VDP_VERSION_TMS9918A)
 		VDP_SetSpritePositionY(0, VDP_SPRITE_DISABLE_SM1);
