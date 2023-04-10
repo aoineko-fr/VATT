@@ -13,30 +13,30 @@
 #include "vdp_reg.h"
 #include "game_menu.h"
 #include "fsm.h"
-#include "fill.h"
+#include "test.h"
 
 //=============================================================================
 // DEFINES
 //=============================================================================
 
 // Version
-#define APP_VERSION "0.5"
+#define APP_VERSION "0.6"
 
 // Library's logo
 #define MSX_GL "\x01\x02\x03\x04\x05\x06"
 
 // VRAM access counter
-#define FILL_COUNT					256
+#define TEST_COUNT					256
 
-// Fill function callback
-typedef void (*cbFill)(u8);
+// Test function callback
+typedef void (*cbTest)(u8);
 
 //
-struct FillTime
+struct TestTime
 {
 	const c8* Code;
 	const c8* Text;
-	cbFill    Function;
+	cbTest    Function;
 };
 
 //
@@ -68,16 +68,17 @@ void State_Report_Update();
 #include "font/font_mgl_sample6.h"
 
 // Test speed
-const struct FillTime g_Time[] =
+const struct TestTime g_Time[] =
 {
-	{ "12ts", "12 TS - out(n),a",             Fill_12 },
-	{ "14ts", "14 TS - out(c),a",             Fill_14 },
-	{ "17ts", "17 TS - out(n),a; nop",        Fill_17 },
-	// { "18ts", "18 TS - outi",                 Fill_18 },
-	{ "19ts", "19 TS - out(c),a; nop",        Fill_19 },
-	{ "20ts", "20 TS - out(n),a; or 0",       Fill_20 },
-	{ "22ts", "22 TS - out(n),a; nop; nop",   Fill_22 },
-	{ "29ts", "29 TS - out(n),a; or 0; djnz", Fill_29 },
+	{ "12t", "12 TS - out(n),a",             Test_12 },
+	{ "14t", "14 TS - out(c),a",             Test_14 },
+	{ "17t", "17 TS - out(n),a; nop",        Test_17 },
+	{ "18t", "18 TS - outi",                 Test_18 },
+	{ "19t", "19 TS - out(c),a; nop",        Test_19 },
+	{ "20t", "20 TS - out(n),a; or 0",       Test_20 },
+	{ "22t", "22 TS - out(n),a; nop; nop",   Test_22 },
+	{ "29t", "29 TS - outi; jp",             Test_29 },
+	{ "31t", "31 TS - out(n),a; nop; djnz",  Test_31 },
 };
 
 // Screen modes
@@ -121,9 +122,20 @@ const Menu g_Menus[] =
 const FSM_State State_Menu =	{ 0, State_Menu_Begin,		State_Menu_Update,		NULL };
 const FSM_State State_Report =	{ 0, State_Report_Begin,	State_Report_Update,	NULL };
 
+
+// { "12t", "12 TS - out(n),a",             Test_12 },
+// { "14t", "14 TS - out(c),a",             Test_14 },
+// { "17t", "17 TS - out(n),a; nop",        Test_17 },
+// { "18t", "18 TS - outi",                 Test_18 },
+// { "19t", "19 TS - out(c),a; nop",        Test_19 },
+// { "20t", "20 TS - out(n),a; or 0",       Test_20 },
+// { "22t", "22 TS - out(n),a; nop; nop",   Test_22 },
+// { "29t", "29 TS - out(n),a; or 0; djnz", Test_29 },
+// { "XXt", "xx TS - xxxx",                 Test_29 },
+
 //                                             T1 G1 G2 MC T2 G3 G4 G5 G6 G7 10 12
-const u8 g_ModeLimitMSX1[numberof(g_Mode)] = { 0, 6, 6, 1, 9, 9, 9, 9, 9, 9, 9, 9 };
-const u8 g_ModeLimitMSX2[numberof(g_Mode)] = { 4, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2 };
+const u8 g_ModeLimitMSX1[numberof(g_Mode)] = { 0, 7, 7, 1,-1,-1,-1,-1,-1,-1,-1,-1 };
+const u8 g_ModeLimitMSX2[numberof(g_Mode)] = { 5, 2, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2 };
 
 // Iteration counter
 const c8* g_IterationText[] = { "1", "2", "4", "8", "16", "32", "64", "128" };
@@ -233,7 +245,7 @@ const c8* GetVDPVersion()
 }
 
 //-----------------------------------------------------------------------------
-// Test a given screen mode with a given fill function
+// Test a given screen mode with a given test function
 void Test(u8 mode, u8 time)
 {
 	VDP_SetMode(g_Mode[mode].Mode); // Set selected screen mode
@@ -263,7 +275,7 @@ void Test(u8 mode, u8 time)
 		// Write reference
 		DisableInterrupt();
 		SetWriteVRAM(g_DestAddr);
-		Fill_29(0x09);
+		Test_31(0x09);
 
 		// Test the given writing function
 		SetWriteVRAM(g_DestAddr);
@@ -306,7 +318,7 @@ void Test(u8 mode, u8 time)
 }
 
 //-----------------------------------------------------------------------------
-// Test all screen mode and fill function
+// Test all screen mode and test function
 void TestAll()
 {
 	for(u8 j = 0; j < g_ModeNum; ++j)
@@ -325,7 +337,7 @@ void Reset()
 	Mem_Set(0xFF, g_ReportMin, numberof(g_Time) * numberof(g_Mode));
 	Mem_Set(0xFF, g_ReportMax, numberof(g_Time) * numberof(g_Mode));
 	SetWriteVRAM(g_DestAddr);
-	Fill_29(' ');
+	Test_31(' ');
 }
 
 //-----------------------------------------------------------------------------
@@ -336,6 +348,26 @@ void DisplayHeader()
 	Print_SetPosition(0, 0);
 	Print_DrawText(MSX_GL" VRAM Access Timing Tester "APP_VERSION);
 	Print_DrawLineH(0, 1, 40);
+
+	// System information (use interslot access for MSX-DOS)
+	u8 biosReadPort  = Bios_InterSlotRead(g_MNROM, 0x0006);
+	u8 biosWritePort = Bios_InterSlotRead(g_MNROM, 0x0007);
+	u8 biosVersion   = Bios_InterSlotRead(g_MNROM, 0x002B);
+	u8 biosNumber    = Bios_InterSlotRead(g_MNROM, 0x002D);
+	// Display BIOS information
+	Print_SetPosition(1, 2);
+	Print_DrawFormat("BIOS:   %s %iHz", GetMSXVersion(biosNumber), (biosVersion & 0x80) ? 50 : 60);
+	switch(GET_VRAM_SIZE())
+	{
+		case 0: Print_DrawText(" 16KB"); break;
+		case 1: Print_DrawText(" 64KB"); break;
+		case 2: Print_DrawText(" 128KB"); break;
+		case 3: Print_DrawText(" 192KB"); break;
+	}
+	Print_DrawFormat(" R/W %2xh/%2xh", biosReadPort, biosWritePort);
+	// Display detected information
+	Print_SetPosition(1, 3);
+	Print_DrawFormat("Detect: %s %iHz\n", GetVDPVersion(), VDP_GetFrequency() == VDP_FREQ_50HZ ? 50 : 60);
 }
 
 //=============================================================================
@@ -440,26 +472,6 @@ const c8* MenuAction_Test(u8 op, i8 value)
 void State_Menu_Begin()
 {
 	DisplayHeader();
-
-	// System information (use interslot access for MSX-DOS)
-	u8 biosReadPort  = Bios_InterSlotRead(g_MNROM, 0x0006);
-	u8 biosWritePort = Bios_InterSlotRead(g_MNROM, 0x0007);
-	u8 biosVersion   = Bios_InterSlotRead(g_MNROM, 0x002B);
-	u8 biosNumber    = Bios_InterSlotRead(g_MNROM, 0x002D);
-	// Display BIOS information
-	Print_SetPosition(1, 2);
-	Print_DrawFormat("BIOS:   %s %iHz", GetMSXVersion(biosNumber), (biosVersion & 0x80) ? 50 : 60);
-	switch(GET_VRAM_SIZE())
-	{
-		case 0: Print_DrawText(" 16KB"); break;
-		case 1: Print_DrawText(" 64KB"); break;
-		case 2: Print_DrawText(" 128KB"); break;
-		case 3: Print_DrawText(" 192KB"); break;
-	}
-	Print_DrawFormat(" R/W %2xh/%2xh", biosReadPort, biosWritePort);
-	// Display detected information
-	Print_SetPosition(1, 3);
-	Print_DrawFormat("Detect: %s %iHz\n", GetVDPVersion(), VDP_GetFrequency() == VDP_FREQ_50HZ ? 50 : 60);
 	Print_DrawLineH(0, 4, 40);
 
 	// Menu
@@ -493,20 +505,20 @@ void State_Menu_Update()
 void State_Report_Begin()
 {
 	DisplayHeader();
-	Print_SetPosition(1, 2);
+	Print_SetPosition(1, 4);
 	Print_DrawFormat("Count:%sx256 Sprite:%c Screen:%c", g_IterationText[g_IterationCount], g_DisplaySprite ? 0x0C : 0x0B, g_DisplayScreen ? 0x0C : 0x0B);
-	Print_DrawLineH(0, 3, 40);
+	Print_DrawLineH(0, 5, 40);
 
 	// Table
 	for(u8 i = 0; i < numberof(g_Time); ++i)
 	{
-		Print_SetPosition(4 + i * 5, 5);
+		Print_SetPosition(4 + i * 4, 7);
 		Print_DrawText(g_Time[i].Code);
 	}
 	for(u8 j = 0; j < numberof(g_Mode); ++j)
 	{
 		u8 x = 0;
-		u8 y = 7 + j;
+		u8 y = 9 + j;
 		Print_SetPosition(x, y);
 		Print_DrawText(g_Mode[j].Code);
 		x += 3;
@@ -522,15 +534,15 @@ void State_Report_Begin()
 			Print_SetPosition(x, y);
 			u8 percentage = (*g_CurResult)[i][j];
 			if(percentage == 0xFF)
-				Print_DrawText(" \x7\x7");
+				Print_DrawText("\x7\x7\x7");
 			else if(percentage == 100)
-				Print_DrawText(" OK");
+				Print_DrawText("OK");
 			else
 			{
 				Print_DrawInt(percentage);
 				Print_DrawChar('%');
 			}
-			x += 4;
+			x += 3;
 		}
 		Print_SetPosition(x, y);
 		Print_DrawChar(0x1D);

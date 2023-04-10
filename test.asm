@@ -10,7 +10,7 @@
 ;; DEFINES
 ;;=============================================================================
 
-FILL_COUNT	= 256
+TEST_COUNT	= 256
 P_VDP_0		= 0x98
 P_VDP_DATA	= P_VDP_0
 P_VDP_1		= 0x99
@@ -44,83 +44,85 @@ _SetWriteVRAM::
 	ret
 
 ;;-----------------------------------------------------------------------------
-;; Fill VRAM - 12 T-States - out(n),a
-;; void Fill_12(u8 value -> A)
+;; test VRAM - 12 T-States - out(n),a
+;; void test_12(u8 value -> A)
 ;;-----------------------------------------------------------------------------
-_Fill_12::
-	.rept	FILL_COUNT
+_Test_12::
+	.rept	TEST_COUNT
 	out		(P_VDP_DATA), a			;; 12 ts
 	.endm
 	ret
 
 ;;-----------------------------------------------------------------------------
-;; Fill VRAM - 14 T-States - out(c),a
-;; void Fill_14(u8 value -> A)
+;; test VRAM - 14 T-States - out(c),a
+;; void test_14(u8 value -> A)
 ;;-----------------------------------------------------------------------------
-_Fill_14::
+_Test_14::
 	ld		c, #P_VDP_DATA
-	.rept	FILL_COUNT
+	.rept	TEST_COUNT
 	out		(c), a					;; 14 ts
 	.endm
 	ret
 
 ;;-----------------------------------------------------------------------------
-;; Fill VRAM - 17 T-States - out(n),a; nop
-;; void Fill_17(u8 value -> A)
+;; test VRAM - 17 T-States - out(n),a; nop
+;; void test_17(u8 value -> A)
 ;;-----------------------------------------------------------------------------
-_Fill_17::
-	.rept	FILL_COUNT
+_Test_17::
+	.rept	TEST_COUNT
 	out		(P_VDP_DATA), a			;; 12 ts
 	nop								;;  5 ts
 	.endm
 	ret
 
 ;;-----------------------------------------------------------------------------
-;; Fill VRAM - 18 T-States - outi
-;; void Fill_18(u8 value -> A)
+;; test VRAM - 18 T-States - outi
+;; void test_18(u8 value -> A)
 ;;-----------------------------------------------------------------------------
-_Fill_18::
+_Test_18::
 	;; Create buffer in RAM
 	ld		hl, #0xE000
 	ld		de, #0xE001
 	ld		(hl), a
-	ld		bc, #FILL_COUNT-1
+	ld		bc, #TEST_COUNT-1
+	ldir
 	;; Copy to VRAM
+	ld		hl, #0xE000
 	ld		c, #P_VDP_DATA
-	.rept	FILL_COUNT
-	outi
+	.rept	TEST_COUNT
+	outi							;; 18 ts
 	.endm
 	ret
 
 ;;-----------------------------------------------------------------------------
-;; Fill VRAM - 19 T-States - out(c),a; nop
-;; void Fill_19(u8 value -> A)
+;; test VRAM - 19 T-States - out(c),a; nop
+;; void test_19(u8 value -> A)
 ;;-----------------------------------------------------------------------------
-_Fill_19::
+_Test_19::
 	ld		c, #P_VDP_DATA
-	.rept	FILL_COUNT
+	.rept	TEST_COUNT
 	out		(c), a					;; 14 ts
 	nop								;;  5 ts
 	.endm
 	ret
 
 ;;-----------------------------------------------------------------------------
-;; Fill VRAM - 20 T-States - out(n),a; or 0
-;; void Fill_20(u8 value -> A)
+;; test VRAM - 20 T-States - out(n),a; or 0
+;; void test_20(u8 value -> A)
 ;;-----------------------------------------------------------------------------
-_Fill_20::
-	.rept	FILL_COUNT
+_Test_20::
+	.rept	TEST_COUNT
 	out		(P_VDP_DATA), a			;; 12 ts
 	or		#0						;;  8 ts
 	.endm
 	ret
 
 ;;-----------------------------------------------------------------------------
-;; Fill VRAM - 22 T-States - out(n),a; nop; nop
-;; void Fill_22(u8 value -> A)
+;; test VRAM - 22 T-States - out(n),a; nop; nop
+;; void test_22(u8 value -> A)
 ;;-----------------------------------------------------------------------------
-_Fill_22::
-	.rept	FILL_COUNT
+_Test_22::
+	.rept	TEST_COUNT
 	out		(P_VDP_DATA), a			;; 12 ts
 	nop								;;  5 ts
 	nop								;;  5 ts
@@ -128,13 +130,45 @@ _Fill_22::
 	ret
 
 ;;-----------------------------------------------------------------------------
-;; Fill VRAM - 29 T-States - out(n),a; or 0; djnz
-;; void Fill_29(u8 value -> A)
+;; test VRAM - 29 T-States - outi; jp
+;; void test_29(u8 value -> A)
 ;;-----------------------------------------------------------------------------
-_Fill_29::
-	ld		b, #0
-fill29:
+_Test_29::
+	;; Create buffer in RAM
+	ld		hl, #0xE000
+	ld		de, #0xE001
+	ld		(hl), a
+	ld		bc, #TEST_COUNT-1
+	ldir
+	;; Copy to VRAM
+	ld		hl, #0xE000
+	ld		b, #TEST_COUNT
+	ld		c, #P_VDP_DATA
+test29:
+	outi							;; 18 ts
+	jp		nz, test29				;; 11 ts
+	ret
+
+;;-----------------------------------------------------------------------------
+;; test VRAM - 31 T-States - out(n),a; nop; djnz
+;; void test_31(u8 value -> A)
+;;-----------------------------------------------------------------------------
+_Test_31::
+	ld		b, #TEST_COUNT
+test31:
+	out		(P_VDP_DATA), a			;; 12 ts
+	nop								;;  5 ts
+	djnz	test31					;; 14 ts
+	ret
+
+;;-----------------------------------------------------------------------------
+;; test VRAM - 34 T-States - out(n),a; or 0; djnz
+;; void test_34(u8 value -> A)
+;;-----------------------------------------------------------------------------
+_Test_34::
+	ld		b, #TEST_COUNT
+test34:
 	out		(P_VDP_DATA), a			;; 12 ts
 	or		#0						;;  8 ts
-	djnz	fill29					;;  9 ts
+	djnz	test34					;; 14 ts
 	ret

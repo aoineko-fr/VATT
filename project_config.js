@@ -37,7 +37,7 @@ Emulator = `${ToolsDir}OpenMSX/openmsx`;
 ProjName = "vatt";
 
 //-- List of project modules to build (array). If empty, ProjName will be added
-ProjModules = [ "fill", ProjName ];
+ProjModules = [ "test", ProjName ];
 
 //-- Project segments base name (string). ProjName will be used if not defined
 // ProjSegments = "";
