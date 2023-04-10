@@ -27,7 +27,7 @@ F_VDP_READ	= 0x00 ;; bit 6: read/write access (0=read)
 ;;=============================================================================
 
 ;;-----------------------------------------------------------------------------
-;; Dummy assembler function
+;; Set VRAM address to write in
 ;; void SetWriteVRAM(u16 dest -> HL)
 ;;-----------------------------------------------------------------------------
 _SetWriteVRAM::
@@ -40,6 +40,23 @@ _SetWriteVRAM::
 	ld		a, h
 	and		a, #0x3F				;; reset 2 MSB bits
 	or		a, #F_VDP_WRIT			;; add write flag
+	out		(P_VDP_ADDR), a			;; RegPort = ((dest >> 8) & 0x3F) + F_VDP_WRIT;
+	ret
+
+;;-----------------------------------------------------------------------------
+;; Set VRAM address to write in
+;; void SetReadVRAM(u16 dest -> HL)
+;;-----------------------------------------------------------------------------
+_SetReadVRAM::
+
+	;; Setup destination address (LSB)
+	ld		a, l
+	out		(P_VDP_ADDR), a			;; RegPort = (dest & 0x00FF);
+
+	;; Setup destination address (MSB)
+	ld		a, h
+	and		a, #0x3F				;; reset 2 MSB bits
+	; or		a, #F_VDP_READ			;; add read flag
 	out		(P_VDP_ADDR), a			;; RegPort = ((dest >> 8) & 0x3F) + F_VDP_WRIT;
 	ret
 
@@ -159,16 +176,4 @@ test31:
 	out		(P_VDP_DATA), a			;; 12 ts
 	nop								;;  5 ts
 	djnz	test31					;; 14 ts
-	ret
-
-;;-----------------------------------------------------------------------------
-;; test VRAM - 34 T-States - out(n),a; or 0; djnz
-;; void test_34(u8 value -> A)
-;;-----------------------------------------------------------------------------
-_Test_34::
-	ld		b, #TEST_COUNT
-test34:
-	out		(P_VDP_DATA), a			;; 12 ts
-	or		#0						;;  8 ts
-	djnz	test34					;; 14 ts
 	ret

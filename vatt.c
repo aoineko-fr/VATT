@@ -20,7 +20,7 @@
 //=============================================================================
 
 // Version
-#define APP_VERSION "0.6"
+#define APP_VERSION "0.7"
 
 // Library's logo
 #define MSX_GL "\x01\x02\x03\x04\x05\x06"
@@ -34,9 +34,9 @@ typedef void (*cbTest)(u8);
 //
 struct TestTime
 {
+	cbTest    Function;
 	const c8* Code;
 	const c8* Text;
-	cbTest    Function;
 };
 
 //
@@ -70,15 +70,15 @@ void State_Report_Update();
 // Test speed
 const struct TestTime g_Time[] =
 {
-	{ "12t", "12 TS - out(n),a",             Test_12 },
-	{ "14t", "14 TS - out(c),a",             Test_14 },
-	{ "17t", "17 TS - out(n),a; nop",        Test_17 },
-	{ "18t", "18 TS - outi",                 Test_18 },
-	{ "19t", "19 TS - out(c),a; nop",        Test_19 },
-	{ "20t", "20 TS - out(n),a; or 0",       Test_20 },
-	{ "22t", "22 TS - out(n),a; nop; nop",   Test_22 },
-	{ "29t", "29 TS - outi; jp",             Test_29 },
-	{ "31t", "31 TS - out(n),a; nop; djnz",  Test_31 },
+	{ Test_12, "12t", "12 TS - out(n),a"            },
+	{ Test_14, "14t", "14 TS - out(c),a"            },
+	{ Test_17, "17t", "17 TS - out(n),a; nop"       },
+	{ Test_18, "18t", "18 TS - outi"                },
+	{ Test_19, "19t", "19 TS - out(c),a; nop"       },
+	{ Test_20, "20t", "20 TS - out(n),a; or 0"      },
+	{ Test_22, "22t", "22 TS - out(n),a; nop; nop"  },
+	{ Test_29, "29t", "29 TS - outi; jp"            },
+	{ Test_31, "31t", "31 TS - out(n),a; nop; djnz" },
 };
 
 // Screen modes
@@ -191,6 +191,10 @@ u8   g_ModeNum;						// Number of available modes (depend of VDP version)
 u8   g_IterationCount;				// Iteration counter
 const u8* g_ModeLimit;				// Speed limit for each screen mdoe
 
+u16  g_TestTotal;					// 
+u16  g_TestMin;						// 
+u16  g_TestMax;						// 
+
 //-----------------------------------------------------------------------------
 // Report table
 //-----------------------------------------------------------------------------
@@ -265,10 +269,11 @@ void Test(u8 mode, u8 time)
 	VDP_EnableDisplay(g_DisplayScreen);
 
 	// Init value
-	u16 total = 0;
-	u16 min = 256;
-	u16 max = 0;
+	g_TestTotal = 0; // Max 
+	g_TestMin = TEST_COUNT;
+	g_TestMax = 0;
 	u8 itNum = 1 << g_IterationCount; // Compute iteration number
+	cbTest cb = g_Time[time].Function;
 
 	for(u8 j = 0; j < itNum; ++j)
 	{
@@ -279,29 +284,29 @@ void Test(u8 mode, u8 time)
 
 		// Test the given writing function
 		SetWriteVRAM(g_DestAddr);
-		g_Time[time].Function(0x0A);
+		cb(0x0A);
 		EnableInterrupt();
 
 		// Check result
 		u16 addr = g_DestAddr;
 		u16 count = 0;
-		for(u16 i = 0; i < 256; ++i)
+		for(u16 i = 0; i < TEST_COUNT; ++i)
 			if(VDP_Peek_16K(addr++) == 0x0A)
 				count++;
 
 		// Store total, min and max
-		total += count;
-		if(count < min)
-			min = count;
-		if(count > max)
-			max = count;
+		g_TestTotal += count;
+		if(count < g_TestMin)
+			g_TestMin = count;
+		if(count > g_TestMax)
+			g_TestMax = count;
 	}
 
-	total = (u16)((u32)total * 100 / 256) >> g_IterationCount; // Scale down the total to get the average
+	g_TestTotal = (u16)((u32)g_TestTotal * 100 / TEST_COUNT) >> g_IterationCount; // Scale down the total to get the average
 
-	g_ReportAve[time][mode] = (u8)total;
-	g_ReportMin[time][mode] = (u8)(100 * min / 256);
-	g_ReportMax[time][mode] = (u8)(100 * max / 256);
+	g_ReportAve[time][mode] = (u8)g_TestTotal;
+	g_ReportMin[time][mode] = (u8)(100 * g_TestMin / TEST_COUNT);
+	g_ReportMax[time][mode] = (u8)(100 * g_TestMax / TEST_COUNT);
 
 	if(g_VDP == VDP_VERSION_TMS9918A)
 		VDP_SetSpritePositionY(0, VDP_SPRITE_DISABLE_SM1);
@@ -313,7 +318,7 @@ void Test(u8 mode, u8 time)
 	VDP_SetColor(COLOR_MERGE(COLOR_WHITE, COLOR_BLACK));
 
 	Print_SetPosition(28, 23);
-	Print_DrawFormat("Result: %i", total);
+	Print_DrawFormat("Result: %i", g_TestTotal);
 	Print_DrawText("%  ");
 }
 
@@ -506,7 +511,7 @@ void State_Report_Begin()
 {
 	DisplayHeader();
 	Print_SetPosition(1, 4);
-	Print_DrawFormat("Count:%sx256 Sprite:%c Screen:%c", g_IterationText[g_IterationCount], g_DisplaySprite ? 0x0C : 0x0B, g_DisplayScreen ? 0x0C : 0x0B);
+	Print_DrawFormat("Count:%sx%i Sprite:%c Screen:%c", g_IterationText[g_IterationCount], TEST_COUNT, g_DisplaySprite ? 0x0C : 0x0B, g_DisplayScreen ? 0x0C : 0x0B);
 	Print_DrawLineH(0, 5, 40);
 
 	// Table
