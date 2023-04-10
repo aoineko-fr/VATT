@@ -20,7 +20,7 @@
 //=============================================================================
 
 // Version
-#define APP_VERSION "0.7"
+#define APP_VERSION "0.8"
 
 // Library's logo
 #define MSX_GL "\x01\x02\x03\x04\x05\x06"
@@ -593,6 +593,8 @@ void main()
 	g_VDP = VDP_GetVersion(); // must be called before VDP_SetMode
 	VDP_SetMode(VDP_MODE_SCREEN0);
 	VDP_ClearVRAM();
+	if(g_VDP >= VDP_VERSION_V9958)
+		VDP_RegWriteBak(25, 0); // Reset MSX2+ R#25 register (to work around wrong MSX2+ BIOS for Omega)
 
 	// Initialize font
 	Print_SetTextFont(g_Font_MGL_Sample6, 0);
