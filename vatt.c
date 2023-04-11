@@ -20,7 +20,7 @@
 //=============================================================================
 
 // Version
-#define APP_VERSION "0.8"
+#define APP_VERSION "0.9"
 
 // Library's logo
 #define MSX_GL "\x01\x02\x03\x04\x05\x06"
@@ -35,7 +35,7 @@ typedef void (*cbTest)(u8);
 struct TestTime
 {
 	cbTest    Function;
-	const c8* Code;
+	u8        Time;
 	const c8* Text;
 };
 
@@ -70,15 +70,15 @@ void State_Report_Update();
 // Test speed
 const struct TestTime g_Time[] =
 {
-	{ Test_12, "12t", "12 TS - out(n),a"            },
-	{ Test_14, "14t", "14 TS - out(c),a"            },
-	{ Test_17, "17t", "17 TS - out(n),a; nop"       },
-	{ Test_18, "18t", "18 TS - outi"                },
-	{ Test_19, "19t", "19 TS - out(c),a; nop"       },
-	{ Test_20, "20t", "20 TS - out(n),a; or 0"      },
-	{ Test_22, "22t", "22 TS - out(n),a; nop; nop"  },
-	{ Test_29, "29t", "29 TS - outi; jp"            },
-	{ Test_31, "31t", "31 TS - out(n),a; nop; djnz" },
+	{ Test_12, 12, "12 TS - out(n),a"            },
+	{ Test_14, 14, "14 TS - out(c),a"            },
+	{ Test_17, 17, "17 TS - out(n),a; nop"       },
+	{ Test_18, 18, "18 TS - outi"                },
+	{ Test_19, 19, "19 TS - out(c),a; nop"       },
+	{ Test_20, 20, "20 TS - out(n),a; or 0"      },
+	{ Test_22, 22, "22 TS - out(n),a; nop; nop"  },
+	{ Test_29, 29, "29 TS - outi; jp"            },
+	{ Test_31, 31, "31 TS - out(n),a; nop; djnz" },
 };
 
 // Screen modes
@@ -106,6 +106,8 @@ const MenuItem g_MenuMain[] =
 	{ "Sprite",   MENU_ITEM_BOOL,   &g_DisplaySprite, 0 },
 	{ "Screen",   MENU_ITEM_BOOL,   &g_DisplayScreen, 0 },
 	{ "Count",    MENU_ITEM_ACTION, MenuAction_Count, 0 },
+	{ "Waits",    MENU_ITEM_INT,    &g_TimeOffset,    0 },
+	{ NULL,       MENU_ITEM_EMPTY,  NULL,             0 },
 	{ "Test",     MENU_ITEM_ACTION, MenuAction_Test,  0 },
 	{ "Test All", MENU_ITEM_ACTION, MenuAction_Test,  1 },
 	{ "Report",   MENU_ITEM_ACTION, MenuAction_Test,  2 },
@@ -133,9 +135,9 @@ const FSM_State State_Report =	{ 0, State_Report_Begin,	State_Report_Update,	NUL
 // { "29t", "29 TS - out(n),a; or 0; djnz", Test_29 },
 // { "XXt", "xx TS - xxxx",                 Test_29 },
 
-//                                             T1 G1 G2 MC T2 G3 G4 G5 G6 G7 10 12
-const u8 g_ModeLimitMSX1[numberof(g_Mode)] = { 0, 7, 7, 1,-1,-1,-1,-1,-1,-1,-1,-1 };
-const u8 g_ModeLimitMSX2[numberof(g_Mode)] = { 5, 2, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2 };
+//                                             T1  G1  G2  MC  T2  G3  G4  G5  G6  G7  YAE YJK
+const u8 g_ModeLimitMSX1[numberof(g_Mode)] = { 12, 29, 29, 13, -1, -1, -1, -1, -1, -1, -1, -1 };
+const u8 g_ModeLimitMSX2[numberof(g_Mode)] = { 20, 15, 15, 15, 20, 15, 15, 15, 15, 15, 15, 15 };
 
 // Iteration counter
 const c8* g_IterationText[] = { "1", "2", "4", "8", "16", "32", "64", "128" };
@@ -189,6 +191,7 @@ bool g_DisplayScreen;				// Blank the screen
 u16  g_DestAddr;					// VRAM destination address
 u8   g_ModeNum;						// Number of available modes (depend of VDP version)
 u8   g_IterationCount;				// Iteration counter
+i8   g_TimeOffset;					// Iteration counter
 const u8* g_ModeLimit;				// Speed limit for each screen mdoe
 
 u16  g_TestTotal;					// 
@@ -372,7 +375,10 @@ void DisplayHeader()
 	Print_DrawFormat(" R/W %2xh/%2xh", biosReadPort, biosWritePort);
 	// Display detected information
 	Print_SetPosition(1, 3);
-	Print_DrawFormat("Detect: %s %iHz\n", GetVDPVersion(), VDP_GetFrequency() == VDP_FREQ_50HZ ? 50 : 60);
+	Print_DrawFormat("Detect: %s", GetVDPVersion());
+	if(g_VDP > VDP_VERSION_TMS9918A)
+		Print_DrawFormat(" %iHz", VDP_GetFrequency() == VDP_FREQ_50HZ ? 50 : 60);
+	Print_Return();
 }
 
 //=============================================================================
@@ -515,29 +521,29 @@ void State_Report_Begin()
 	Print_DrawLineH(0, 5, 40);
 
 	// Table
-	for(u8 i = 0; i < numberof(g_Time); ++i)
+	for(u8 t = 0; t < numberof(g_Time); ++t)
 	{
-		Print_SetPosition(4 + i * 4, 7);
-		Print_DrawText(g_Time[i].Code);
+		Print_SetPosition(4 + t * 4, 7);
+		Print_DrawFormat("%it", g_Time[t].Time + g_TimeOffset);
 	}
-	for(u8 j = 0; j < numberof(g_Mode); ++j)
+	for(u8 m = 0; m < numberof(g_Mode); ++m)
 	{
 		u8 x = 0;
-		u8 y = 9 + j;
+		u8 y = 9 + m;
 		Print_SetPosition(x, y);
-		Print_DrawText(g_Mode[j].Code);
+		Print_DrawText(g_Mode[m].Code);
 		x += 3;
 
-		for(u8 i = 0; i < numberof(g_Time); ++i)
+		for(u8 t = 0; t < numberof(g_Time); ++t)
 		{
 			Print_SetPosition(x, y);
-			if(i == g_ModeLimit[j])
+			if((g_Time[t].Time + g_TimeOffset >= g_ModeLimit[m]) && ((t == 0) || (g_Time[t - 1].Time + g_TimeOffset < g_ModeLimit[m])))
 				Print_DrawChar(0x16);
 			else
 				Print_DrawChar(0x1D);
 			x += 1;
 			Print_SetPosition(x, y);
-			u8 percentage = (*g_CurResult)[i][j];
+			u8 percentage = (*g_CurResult)[t][m];
 			if(percentage == 0xFF)
 				Print_DrawText("\x7\x7\x7");
 			else if(percentage == 100)
@@ -612,6 +618,7 @@ void main()
 	g_DisplaySprite = TRUE;
 	g_DisplayScreen = TRUE;
 	g_IterationCount = 4;
+	g_TimeOffset = 0;
 	g_DestAddr = VDP_GetLayoutTable() + (40 * 17);
 	switch(g_VDP)
 	{
