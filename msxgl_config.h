@@ -243,7 +243,7 @@
 #define MENU_ITEM_X_GOTO			1		// Goto type item label X position
 #define MENU_ITEM_ALIGN				MENU_ITEM_ALIGN_LEFT // Item label alignment
 #define MENU_ITEM_ALIGN_GOTO		MENU_ITEM_ALIGN_LEFT // Goto type item label alignment
-#define MENU_VALUE_X				9		// Item value X position
+#define MENU_VALUE_X				11		// Item value X position
 #define MENU_USE_DYNAMIC_STATE		FALSE	//
 
 //-----------------------------------------------------------------------------

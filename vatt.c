@@ -20,7 +20,7 @@
 //=============================================================================
 
 // Version
-#define APP_VERSION "0.9"
+#define APP_VERSION "0.10"
 
 // Library's logo
 #define MSX_GL "\x01\x02\x03\x04\x05\x06"
@@ -34,9 +34,9 @@ typedef void (*cbTest)(u8);
 //
 struct TestTime
 {
-	cbTest    Function;
-	u8        Time;
-	const c8* Text;
+	cbTest    Function;				// Test function pointer
+	u8        Time;					// I/O access interval
+	const c8* Text;					// Description
 };
 
 //
@@ -53,6 +53,8 @@ const c8* MenuAction_Mode(u8 op, i8 value);
 const c8* MenuAction_Time(u8 op, i8 value);
 const c8* MenuAction_Count(u8 op, i8 value);
 const c8* MenuAction_Test(u8 op, i8 value);
+void MenuInit_Main();
+void MenuInit_Sub();
 
 // State functions prototypes
 void State_Menu_Begin();
@@ -70,15 +72,23 @@ void State_Report_Update();
 // Test speed
 const struct TestTime g_Time[] =
 {
-	{ Test_12, 12, "12 TS - out(n),a"            },
-	{ Test_14, 14, "14 TS - out(c),a"            },
-	{ Test_17, 17, "17 TS - out(n),a; nop"       },
-	{ Test_18, 18, "18 TS - outi"                },
-	{ Test_19, 19, "19 TS - out(c),a; nop"       },
-	{ Test_20, 20, "20 TS - out(n),a; or 0"      },
-	{ Test_22, 22, "22 TS - out(n),a; nop; nop"  },
-	{ Test_29, 29, "29 TS - outi; jp"            },
-	{ Test_31, 31, "31 TS - out(n),a; nop; djnz" },
+	{ Test_12, 12, "12: out(n),a"               },
+	{ Test_14, 14, "14: out(c),a"               },
+	{ Test_17, 17, "17: out(n),a; nop"          },
+	{ Test_18, 18, "18: outi"                   },
+	{ Test_19, 19, "19: out(c),a; nop"          },
+	{ Test_20, 20, "20: out(n),a; cp(hl)"       },
+	{ Test_21, 21, "21: out(c),a; inc de"       },
+	{ Test_22, 22, "22: out(c),a; cp(hl)"       },
+	{ Test_23, 23, "23: otir"                   },
+	{ Test_24, 24, "24: out(n),a; inc(hl)"      },
+	{ Test_25, 25, "25: outi; inc de"           },
+	{ Test_26, 26, "26: out(n),a; djnz"         },
+	{ Test_27, 27, "27: out(n),a;cp(hl);inc de" },
+	{ Test_28, 28, "28: out(n),a; cp(hl) x 2"   },
+	{ Test_29, 29, "29: outi; jp nz"            },
+	{ Test_30, 30, "30: out(c),a; cp(hl) x 2"   },
+	// { Test_31, 31, "31 TS - out(n),a; nop; djnz"  },
 };
 
 // Screen modes
@@ -98,15 +108,20 @@ const struct ScreenMode g_Mode[] =
 	{ "YJK", "S12", "GM7 + YJK (SC12)",          VDP_MODE_SCREEN12 },
 };
 
+enum MENU_IDS
+{
+	MENU_MAIN = 0,
+	MENU_OPTIONS,
+	MENU_MODES,
+	MENU_TIMINGS,
+};
+
 // Menu main page
 const MenuItem g_MenuMain[] =
 {
 	{ "Mode",     MENU_ITEM_ACTION, MenuAction_Mode,  0 },
 	{ "Timing",   MENU_ITEM_ACTION, MenuAction_Time,  0 },
-	{ "Sprite",   MENU_ITEM_BOOL,   &g_DisplaySprite, 0 },
-	{ "Screen",   MENU_ITEM_BOOL,   &g_DisplayScreen, 0 },
-	{ "Count",    MENU_ITEM_ACTION, MenuAction_Count, 0 },
-	{ "Waits",    MENU_ITEM_INT,    &g_TimeOffset,    0 },
+	{ "Options>", MENU_ITEM_GOTO,   NULL,             MENU_OPTIONS },
 	{ NULL,       MENU_ITEM_EMPTY,  NULL,             0 },
 	{ "Test",     MENU_ITEM_ACTION, MenuAction_Test,  0 },
 	{ "Test All", MENU_ITEM_ACTION, MenuAction_Test,  1 },
@@ -114,30 +129,122 @@ const MenuItem g_MenuMain[] =
 	{ "Reset",    MENU_ITEM_ACTION, MenuAction_Test,  3 },
 };
 
+// Options menu
+const MenuItem g_MenuOption[] =
+{
+	{ "Modes>",   MENU_ITEM_GOTO,   NULL,             MENU_MODES },
+	{ "Timings>", MENU_ITEM_GOTO,   NULL,             MENU_TIMINGS },
+	{ "Sprite",   MENU_ITEM_BOOL,   &g_DisplaySprite, 0 },
+	{ "Screen",   MENU_ITEM_BOOL,   &g_DisplayScreen, 0 },
+	{ "Count",    MENU_ITEM_ACTION, MenuAction_Count, 0 },
+	{ "Waits",    MENU_ITEM_INT,    &g_TimeOffset,    0 },
+	{ NULL,       MENU_ITEM_EMPTY,  NULL,             0 },
+	{ "<Back",    MENU_ITEM_GOTO,   NULL,             MENU_MAIN },
+};
+
+// Screen mode selection menu
+const MenuItem g_MenuMode[] =
+{
+	{ "T1",       MENU_ITEM_BOOL,   &g_SelectModes[0],  0 },
+	{ "G1",       MENU_ITEM_BOOL,   &g_SelectModes[1],  0 },
+	{ "G2",       MENU_ITEM_BOOL,   &g_SelectModes[2],  0 },
+	{ "MC",       MENU_ITEM_BOOL,   &g_SelectModes[3],  0 },
+	{ "T2",       MENU_ITEM_BOOL,   &g_SelectModes[4],  0 },
+	{ "G3",       MENU_ITEM_BOOL,   &g_SelectModes[5],  0 },
+	{ "G4",       MENU_ITEM_BOOL,   &g_SelectModes[6],  0 },
+	{ "G5",       MENU_ITEM_BOOL,   &g_SelectModes[7],  0 },
+	{ "G6",       MENU_ITEM_BOOL,   &g_SelectModes[8],  0 },
+	{ "G7",       MENU_ITEM_BOOL,   &g_SelectModes[9],  0 },
+	{ "YAE",      MENU_ITEM_BOOL,   &g_SelectModes[10], 0 },
+	{ "YJK",      MENU_ITEM_BOOL,   &g_SelectModes[11], 0 },
+	{ NULL,       MENU_ITEM_EMPTY,  NULL,               0 },
+	{ "<Back",    MENU_ITEM_GOTO,   NULL,               MENU_OPTIONS },
+};
+
+// Screen mode selection menu
+const MenuItem g_MenuTime[] =
+{
+	{ "12 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[0],  0 },
+	{ "14 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[1],  0 },
+	{ "17 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[2],  0 },
+	{ "18 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[3],  0 },
+	{ "19 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[4],  0 },
+	{ "20 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[5],  0 },
+	{ "21 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[6],  0 },
+	{ "22 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[7],  0 },
+	{ "23 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[8],  0 },
+	{ "24 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[9],  0 },
+	{ "25 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[10], 0 },
+	{ "26 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[11], 0 },
+	{ "27 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[12], 0 },
+	{ "28 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[13], 0 },
+	{ "29 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[14], 0 },
+	{ "30 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[15], 0 },
+	// { "31 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[16], 0 },
+	{ NULL,       MENU_ITEM_EMPTY,  NULL,               0 },
+	{ "<Back",    MENU_ITEM_GOTO,   NULL,               MENU_OPTIONS },
+};
+
 // Menu pages configuration
 const Menu g_Menus[] =
 {
-	{ NULL, g_MenuMain, numberof(g_MenuMain), NULL },
+	{ NULL, g_MenuMain,   numberof(g_MenuMain),   MenuInit_Main }, // MENU_MAIN
+	{ NULL, g_MenuOption, numberof(g_MenuOption), MenuInit_Sub  }, // MENU_OPTIONS
+	{ NULL, g_MenuMode,   numberof(g_MenuMode),   MenuInit_Sub  }, // MENU_MODES
+	{ NULL, g_MenuTime,   numberof(g_MenuTime),   MenuInit_Sub  }, // MENU_TIMINGS
 };
 
 // States data
-const FSM_State State_Menu =	{ 0, State_Menu_Begin,		State_Menu_Update,		NULL };
-const FSM_State State_Report =	{ 0, State_Report_Begin,	State_Report_Update,	NULL };
-
-
-// { "12t", "12 TS - out(n),a",             Test_12 },
-// { "14t", "14 TS - out(c),a",             Test_14 },
-// { "17t", "17 TS - out(n),a; nop",        Test_17 },
-// { "18t", "18 TS - outi",                 Test_18 },
-// { "19t", "19 TS - out(c),a; nop",        Test_19 },
-// { "20t", "20 TS - out(n),a; or 0",       Test_20 },
-// { "22t", "22 TS - out(n),a; nop; nop",   Test_22 },
-// { "29t", "29 TS - out(n),a; or 0; djnz", Test_29 },
-// { "XXt", "xx TS - xxxx",                 Test_29 },
+const FSM_State State_Menu =	{ 0, State_Menu_Begin,   State_Menu_Update,   NULL };
+const FSM_State State_Report =	{ 0, State_Report_Begin, State_Report_Update, NULL };
 
 //                                             T1  G1  G2  MC  T2  G3  G4  G5  G6  G7  YAE YJK
 const u8 g_ModeLimitMSX1[numberof(g_Mode)] = { 12, 29, 29, 13, -1, -1, -1, -1, -1, -1, -1, -1 };
 const u8 g_ModeLimitMSX2[numberof(g_Mode)] = { 20, 15, 15, 15, 20, 15, 15, 15, 15, 15, 15, 15 };
+
+// Is default test function for MSX1 machine
+const bool g_DefaultTestMSX1[numberof(g_Time)] =
+{
+	TRUE,	// 12 TS - out(n),a
+	TRUE,	// 14 TS - out(c),a
+	TRUE,	// 17 TS - out(n),a; nop
+	TRUE,	// 18 TS - outi
+	FALSE,	// 19 TS - out(c),a; nop
+	FALSE,	// 20 TS - out(n),a; cp(hl)
+	FALSE,	// 21 TS - out(c),a; inc de
+	FALSE,	// 22 TS - out(c),a; cp(hl)
+	FALSE,	// 23 TS - otir
+	FALSE,	// 24 TS - out(n),a; inc(hl)
+	FALSE,	// 25 TS - outi; inc de
+	TRUE,	// 26 TS - out(n),a; djnz
+	TRUE,	// 27 TS - out(n),a;cp();inc de
+	TRUE,	// 28 TS - out(n),a; cp(hl) x 2
+	TRUE,	// 29 TS - outi; jp nz
+	TRUE,	// 30 TS - out(c),a; cp(hl) x 2
+	// FALSE,	// 31 TS - out(n),a; nop; djnz
+};
+
+// Is default test function for MSX2 machine
+const bool g_DefaultTestMSX2[numberof(g_Time)] =
+{
+	TRUE,	// 12 TS - out(n),a
+	TRUE,	// 14 TS - out(c),a
+	TRUE,	// 17 TS - out(n),a; nop
+	TRUE,	// 18 TS - outi
+	TRUE,	// 19 TS - out(c),a; nop
+	TRUE,	// 20 TS - out(n),a; cp(hl)
+	TRUE,	// 21 TS - out(c),a; inc de
+	TRUE,	// 22 TS - out(c),a; cp(hl)
+	TRUE,	// 23 TS - otir
+	FALSE,	// 24 TS - out(n),a; inc(hl)
+	FALSE,	// 25 TS - outi; inc de
+	FALSE,	// 26 TS - out(n),a; djnz
+	FALSE,	// 27 TS - out(n),a;cp();inc de
+	FALSE,	// 28 TS - out(n),a; cp(hl) x 2
+	FALSE,	// 29 TS - outi; jp nz
+	FALSE,	// 30 TS - out(c),a; cp(hl) x 2
+	// FALSE,	// 31 TS - out(n),a; nop; djnz
+};
 
 // Iteration counter
 const c8* g_IterationText[] = { "1", "2", "4", "8", "16", "32", "64", "128" };
@@ -184,8 +291,8 @@ const struct VDP_Sprite g_SpriteAttr[32] =
 //=============================================================================
 
 u8   g_VDP;							// Detected VDP version
-u8   g_SelectMode;					// Selected Screen mode
-u8   g_SelectTime;					// Selected access time
+u8   g_CurMode;						// Current Screen mode
+u8   g_CurTime;						// Selected access time
 bool g_DisplaySprite;				// Display sprite
 bool g_DisplayScreen;				// Blank the screen
 u16  g_DestAddr;					// VRAM destination address
@@ -193,6 +300,8 @@ u8   g_ModeNum;						// Number of available modes (depend of VDP version)
 u8   g_IterationCount;				// Iteration counter
 i8   g_TimeOffset;					// Iteration counter
 const u8* g_ModeLimit;				// Speed limit for each screen mdoe
+bool g_SelectTimes[numberof(g_Time)]; // 
+bool g_SelectModes[numberof(g_Mode)]; //
 
 u16  g_TestTotal;					// 
 u16  g_TestMin;						// 
@@ -329,9 +438,17 @@ void Test(u8 mode, u8 time)
 // Test all screen mode and test function
 void TestAll()
 {
-	for(u8 j = 0; j < g_ModeNum; ++j)
-		for(u8 i = 0; i < numberof(g_Time); ++i)
-			Test(j, i);
+	for(u8 m = 0; m < g_ModeNum; ++m)
+	{
+		if(!g_SelectModes[m])
+			continue;
+		for(u8 t = 0; t < numberof(g_Time); ++t)
+		{
+			if(!g_SelectTimes[t])
+				continue;
+			Test(m, t);
+		}
+	}
 
 	g_CurResult = &g_ReportAve;
 	FSM_SetState(&State_Report);
@@ -395,14 +512,15 @@ const c8* MenuAction_Mode(u8 op, i8 value)
 	{
 	case MENU_ACTION_SET:
 	case MENU_ACTION_INC:
-		g_SelectMode = (g_SelectMode + 1) % g_ModeNum;
+		g_CurMode = (g_CurMode + 1) % g_ModeNum;
 		break;
+
 	case MENU_ACTION_DEC:
-		g_SelectMode = (g_SelectMode + (g_ModeNum - 1)) % g_ModeNum;
+		g_CurMode = (g_CurMode + (g_ModeNum - 1)) % g_ModeNum;
 		break;
 	}
 
-	return g_Mode[g_SelectMode].Text;
+	return g_Mode[g_CurMode].Text;
 }
 
 //-----------------------------------------------------------------------------
@@ -415,14 +533,15 @@ const c8* MenuAction_Time(u8 op, i8 value)
 	{
 	case MENU_ACTION_SET:
 	case MENU_ACTION_INC:
-		g_SelectTime = (g_SelectTime + 1) % numberof(g_Time);
+		g_CurTime = (g_CurTime + 1) % numberof(g_Time);
 		break;
+
 	case MENU_ACTION_DEC:
-		g_SelectTime = (g_SelectTime + (numberof(g_Time) - 1)) % numberof(g_Time);
+		g_CurTime = (g_CurTime + (numberof(g_Time) - 1)) % numberof(g_Time);
 		break;
 	}
 
-	return g_Time[g_SelectTime].Text;
+	return g_Time[g_CurTime].Text;
 }
 
 //-----------------------------------------------------------------------------
@@ -437,6 +556,7 @@ const c8* MenuAction_Count(u8 op, i8 value)
 	case MENU_ACTION_INC:
 		g_IterationCount = (g_IterationCount + 1) % numberof(g_IterationText);
 		break;
+
 	case MENU_ACTION_DEC:
 		g_IterationCount = (g_IterationCount + (numberof(g_IterationText) - 1)) % numberof(g_IterationText);
 		break;
@@ -454,17 +574,18 @@ const c8* MenuAction_Test(u8 op, i8 value)
 		switch(value)
 		{
 		case 0: // Test current config
-		{
-			Test(g_SelectMode, g_SelectTime);
+			Test(g_CurMode, g_CurTime);
 			break;
-		}
+
 		case 1: // Test all config
 			TestAll();
 			break;
+
 		case 2: // Report
 			g_CurResult = &g_ReportAve;
 			FSM_SetState(&State_Report);
 			break;
+
 		case 3: // Reset
 			Reset();
 			break;
@@ -472,6 +593,21 @@ const c8* MenuAction_Test(u8 op, i8 value)
 	}
 
 	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// 
+void MenuInit_Sub()
+{
+	VDP_FillVRAM_16K(0, VDP_GetLayoutTable() + 40 * 5, 40 * (24 - 5));
+}
+
+//-----------------------------------------------------------------------------
+// 
+void MenuInit_Main()
+{
+	MenuInit_Sub();
+	Print_DrawLineH(0, 16, 40);
 }
 
 //=============================================================================
@@ -489,7 +625,7 @@ void State_Menu_Begin()
 	Menu_Initialize(g_Menus);
 	Menu_DrawPage(0);
 
-	Print_DrawLineH(0, 16, 40);
+	// Print_DrawLineH(0, 16, 40);
 }
 
 //-----------------------------------------------------------------------------
@@ -499,7 +635,7 @@ void State_Menu_Update()
 	Menu_Update();
 
 	if(Keyboard_IsKeyPressed(KEY_RET))
-		Test(g_SelectMode, g_SelectTime);
+		Test(g_CurMode, g_CurTime);
 
 	if(Keyboard_IsKeyPressed(KEY_R))
 	{
@@ -520,22 +656,37 @@ void State_Report_Begin()
 	Print_DrawFormat("Count:%sx%i Sprite:%c Screen:%c", g_IterationText[g_IterationCount], TEST_COUNT, g_DisplaySprite ? 0x0C : 0x0B, g_DisplayScreen ? 0x0C : 0x0B);
 	Print_DrawLineH(0, 5, 40);
 
+	u8 x = 4;
+	u8 y = 7;
+	u8 col = 0;
 	// Table
 	for(u8 t = 0; t < numberof(g_Time); ++t)
 	{
-		Print_SetPosition(4 + t * 4, 7);
+		if(!g_SelectTimes[t]) // Skip unselected test functions
+			continue;
+		if(++col > 9)
+			break;
+
+		Print_SetPosition(x, y);
 		Print_DrawFormat("%it", g_Time[t].Time + g_TimeOffset);
+		x += 4;
 	}
 	for(u8 m = 0; m < numberof(g_Mode); ++m)
 	{
-		u8 x = 0;
-		u8 y = 9 + m;
+		x = 0;
+		y = 9 + m;
 		Print_SetPosition(x, y);
 		Print_DrawText(g_Mode[m].Code);
 		x += 3;
 
+		col = 0;
 		for(u8 t = 0; t < numberof(g_Time); ++t)
 		{
+			if(!g_SelectTimes[t]) // Skip unselected test functions
+				continue;
+			if(++col > 9)
+				break;
+
 			Print_SetPosition(x, y);
 			if((g_Time[t].Time + g_TimeOffset >= g_ModeLimit[m]) && ((t == 0) || (g_Time[t - 1].Time + g_TimeOffset < g_ModeLimit[m])))
 				Print_DrawChar(0x16);
@@ -613,32 +764,40 @@ void main()
 	VDP_FillVRAM_16K(COLOR_LIGHT_RED, 0x1800, 0x200);
 
 	// Initialize variables
-	g_SelectMode = 0;
-	g_SelectTime = 0;
 	g_DisplaySprite = TRUE;
 	g_DisplayScreen = TRUE;
 	g_IterationCount = 4;
 	g_TimeOffset = 0;
 	g_DestAddr = VDP_GetLayoutTable() + (40 * 17);
+	const bool* defaultTime;
 	switch(g_VDP)
 	{
 	case VDP_VERSION_TMS9918A:
 		g_ModeNum = 4;
 		g_ModeLimit = g_ModeLimitMSX1;
+		defaultTime = g_DefaultTestMSX1;
 		break;
 
 	case VDP_VERSION_V9938:
 		g_ModeNum = 10;
 		g_ModeLimit = g_ModeLimitMSX2;
+		defaultTime = g_DefaultTestMSX2;
 		break;
 
 	case VDP_VERSION_V9958:
 		g_ModeNum = numberof(g_Mode);
 		g_ModeLimit = g_ModeLimitMSX2;
+		defaultTime = g_DefaultTestMSX2;
 		break;
 	}
-	Reset();
+	g_CurMode = 0;
+	for(u8 i = 0; i < numberof(g_Time); ++i)
+		g_SelectTimes[i] = defaultTime[i];
+	g_CurTime = 0;
+	for(u8 i = 0; i < numberof(g_Mode); ++i)
+		g_SelectModes[i] = TRUE;
 
+	Reset();
 	FSM_SetState(&State_Menu);
 
 	u8 count = 0;
