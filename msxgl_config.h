@@ -225,7 +225,7 @@
 #define MENU_SCREEN_WIDTH			40		// Screen width
 #define MENU_CLEAR					0		// Clear character
 #define MENU_POS_X					0		// Frame position X
-#define MENU_POS_Y					5		// Frame position Y
+#define MENU_POS_Y					6		// Frame position Y
 #define MENU_WIDTH					40		// Frame width
 #define MENU_HEIGHT					8		// Frame height
 #define MENU_CHAR_CURSOR			0x8A	// Cursor charactter

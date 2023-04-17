@@ -14,13 +14,14 @@
 #include "game_menu.h"
 #include "fsm.h"
 #include "test.h"
+#include "ascii.h"
 
 //=============================================================================
 // DEFINES
 //=============================================================================
 
 // Version
-#define APP_VERSION "0.10"
+#define APP_VERSION "0.11"
 
 // Library's logo
 #define MSX_GL "\x01\x02\x03\x04\x05\x06"
@@ -53,6 +54,7 @@ const c8* MenuAction_Mode(u8 op, i8 value);
 const c8* MenuAction_Time(u8 op, i8 value);
 const c8* MenuAction_Count(u8 op, i8 value);
 const c8* MenuAction_Test(u8 op, i8 value);
+const c8* MenuAction_Name(u8 op, i8 value);
 void MenuInit_Main();
 void MenuInit_Sub();
 
@@ -132,6 +134,7 @@ const MenuItem g_MenuMain[] =
 // Options menu
 const MenuItem g_MenuOption[] =
 {
+	{ "Name",     MENU_ITEM_ACTION, MenuAction_Name,  0 },
 	{ "Modes>",   MENU_ITEM_GOTO,   NULL,             MENU_MODES },
 	{ "Timings>", MENU_ITEM_GOTO,   NULL,             MENU_TIMINGS },
 	{ "Sprite",   MENU_ITEM_BOOL,   &g_DisplaySprite, 0 },
@@ -307,6 +310,8 @@ u16  g_TestTotal;					//
 u16  g_TestMin;						// 
 u16  g_TestMax;						// 
 
+c8 g_StringBuffer[64];
+const c8* g_MachineName;
 //-----------------------------------------------------------------------------
 // Report table
 //-----------------------------------------------------------------------------
@@ -358,6 +363,49 @@ const c8* GetVDPVersion()
 		return "V9958";
 	}
 	return "Unknow";
+}
+
+//-----------------------------------------------------------------------------
+// Get next character from user
+c8 GetCharacter()
+{
+	__asm
+		push	ix
+		ld		ix, #R_CHGET
+		ld		iy, #0x0000
+		call	R_CALSLT
+		pop		ix
+	__endasm;
+}
+
+//-----------------------------------------------------------------------------
+// Test a given screen mode with a given test function
+const c8* GetStringAt(u8 x, u8 y)
+{
+	Print_SetPosition(x, y);
+	c8* ptr = g_StringBuffer;
+	c8 chr = 0;
+	while(chr != ASCII_RETURN)
+	{
+		chr = GetCharacter();
+		if((chr == ASCII_BS) && (ptr > g_StringBuffer))
+		{
+			Print_Backspace(1);
+			ptr--;
+		}
+
+		if((chr == ASCII_SPACE) && (ptr == g_StringBuffer))
+			continue;
+
+		if((chr >= ASCII_SPACE) && (chr <= '~'))
+		{
+			Print_DrawChar(chr);
+			*ptr = chr;
+			ptr++;
+		}
+	}
+	*ptr = 0;
+	return g_StringBuffer;
 }
 
 //-----------------------------------------------------------------------------
@@ -474,13 +522,16 @@ void DisplayHeader()
 	Print_DrawText(MSX_GL" VRAM Access Timing Tester "APP_VERSION);
 	Print_DrawLineH(0, 1, 40);
 
+	Print_SetPosition(1, 2);
+	Print_DrawFormat("Machine:%s", g_MachineName);
+
 	// System information (use interslot access for MSX-DOS)
 	u8 biosReadPort  = Bios_InterSlotRead(g_MNROM, 0x0006);
 	u8 biosWritePort = Bios_InterSlotRead(g_MNROM, 0x0007);
 	u8 biosVersion   = Bios_InterSlotRead(g_MNROM, 0x002B);
 	u8 biosNumber    = Bios_InterSlotRead(g_MNROM, 0x002D);
 	// Display BIOS information
-	Print_SetPosition(1, 2);
+	Print_SetPosition(1, 3);
 	Print_DrawFormat("BIOS:   %s %iHz", GetMSXVersion(biosNumber), (biosVersion & 0x80) ? 50 : 60);
 	switch(GET_VRAM_SIZE())
 	{
@@ -491,7 +542,7 @@ void DisplayHeader()
 	}
 	Print_DrawFormat(" R/W %2xh/%2xh", biosReadPort, biosWritePort);
 	// Display detected information
-	Print_SetPosition(1, 3);
+	Print_SetPosition(1, 4);
 	Print_DrawFormat("Detect: %s", GetVDPVersion());
 	if(g_VDP > VDP_VERSION_TMS9918A)
 		Print_DrawFormat(" %iHz", VDP_GetFrequency() == VDP_FREQ_50HZ ? 50 : 60);
@@ -543,6 +594,22 @@ const c8* MenuAction_Time(u8 op, i8 value)
 
 	return g_Time[g_CurTime].Text;
 }
+
+//-----------------------------------------------------------------------------
+// 
+const c8* MenuAction_Name(u8 op, i8 value)
+{
+	value;
+
+	if(op == MENU_ACTION_SET)
+	{
+		Print_DrawCharXAt(12, 6, ' ', 40 - 12);
+		g_MachineName = GetStringAt(12, 6);
+	}
+
+	return g_MachineName;
+}
+
 
 //-----------------------------------------------------------------------------
 // 
@@ -599,7 +666,9 @@ const c8* MenuAction_Test(u8 op, i8 value)
 // 
 void MenuInit_Sub()
 {
-	VDP_FillVRAM_16K(0, VDP_GetLayoutTable() + 40 * 5, 40 * (24 - 5));
+	Print_Clear();
+	DisplayHeader();
+	Print_DrawLineH(0, 5, 40);
 }
 
 //-----------------------------------------------------------------------------
@@ -618,8 +687,8 @@ void MenuInit_Main()
 //
 void State_Menu_Begin()
 {
-	DisplayHeader();
-	Print_DrawLineH(0, 4, 40);
+	// DisplayHeader();
+	// Print_DrawLineH(0, 5, 40);
 
 	// Menu
 	Menu_Initialize(g_Menus);
@@ -634,17 +703,17 @@ void State_Menu_Update()
 {
 	Menu_Update();
 
-	if(Keyboard_IsKeyPressed(KEY_RET))
+	if(Keyboard_IsKeyPressed(KEY_T))
 		Test(g_CurMode, g_CurTime);
+
+	if(Keyboard_IsKeyPressed(KEY_E))
+		TestAll();
 
 	if(Keyboard_IsKeyPressed(KEY_R))
 	{
 		g_CurResult = &g_ReportAve;
 		FSM_SetState(&State_Report);
 	}
-
-	if(Keyboard_IsKeyPressed(KEY_T))
-		TestAll();
 }
 
 //-----------------------------------------------------------------------------
@@ -652,9 +721,8 @@ void State_Menu_Update()
 void State_Report_Begin()
 {
 	DisplayHeader();
-	Print_SetPosition(1, 4);
+	Print_SetPosition(1, 5);
 	Print_DrawFormat("Count:%sx%i Sprite:%c Screen:%c", g_IterationText[g_IterationCount], TEST_COUNT, g_DisplaySprite ? 0x0C : 0x0B, g_DisplayScreen ? 0x0C : 0x0B);
-	Print_DrawLineH(0, 5, 40);
 
 	u8 x = 4;
 	u8 y = 7;
@@ -744,8 +812,10 @@ void State_Report_Update()
 
 //-----------------------------------------------------------------------------
 /// Program entry point
-void main()
+u8 main(u8 argc, const c8** argv)
 {
+	argc; argv;
+
 	// Initialize screen
 	g_VDP = VDP_GetVersion(); // must be called before VDP_SetMode
 	VDP_SetMode(VDP_MODE_SCREEN0);
@@ -756,6 +826,19 @@ void main()
 	// Initialize font
 	Print_SetTextFont(g_Font_MGL_Sample6, 0);
 	Print_SetColor(COLOR_WHITE, COLOR_BLACK);
+
+	// Get machine name
+#if (TARGET_TYPE == TYPE_DOS)
+	if(argc > 0)
+	{
+		g_MachineName = argv[0];
+	}
+	else
+#endif
+	{
+		Print_DrawText("Machine:\n\n(press \x84 to validate)");
+		g_MachineName = GetStringAt(9, 0);
+	}
 
 	// Initialize sprite data
 	VDP_SetSpriteFlag(VDP_SPRITE_SIZE_16 | VDP_SPRITE_SCALE_2);
