@@ -27,7 +27,7 @@ Emulator = `${ToolsDir}OpenMSX/openmsx`;
 // DoMake    = true;	//-- Link all the project and engine source code (boolean). Merge all REL into one IHX file
 // DoPackage = true;	//-- Generate final binary file (boolean). Binarize the IHX file
 // DoDeploy  = true;	//-- Gathering of all files necessary for the program to work (boolean). Depends on the type of target
-// DoRun     = false;	//-- Start the program automatically at the end of the build (boolean)
+DoRun     = true;	//-- Start the program automatically at the end of the build (boolean)
 
 //*****************************************************************************
 // PROJECT SETTINGS
@@ -43,7 +43,7 @@ ProjModules = [ "test", ProjName ];
 // ProjSegments = "";
 
 //-- List of library modules to build (array)
-LibModules = [ "fsm", "game_menu", "system", "bios", "vdp", "print", "input", "memory" ];
+LibModules = [ "string", "fsm", "game_menu", "system", "bios", "vdp", "print", "input", "memory" ];
 
 //-- Additional sources to be compiled and linked with the project (array)
 // AddSources = [];

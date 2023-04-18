@@ -20,19 +20,51 @@
 // DEFINES
 //=============================================================================
 
-// Version
-#define APP_VERSION "0.11"
+//-----------------------------------------------------------------------------
+// Configuration
+//-----------------------------------------------------------------------------
 
-// Library's logo
-#define MSX_GL "\x01\x02\x03\x04\x05\x06"
+// Version
+#define APP_VERSION "0.12"
 
 // VRAM access counter
 #define TEST_COUNT					256
 
+// Size of the register-edit table
+#define REG_EDIT_NUM				10
+
+//-----------------------------------------------------------------------------
+// Defines and enums
+//-----------------------------------------------------------------------------
+
+// Library's logo
+#define MSX_GL "\x01\x02\x03\x04\x05\x06"
+
+// Register edit types
+enum REG_EDIT
+{
+	REG_EDIT_SET,
+	REG_EDIT_AND,
+	REG_EDIT_OR,
+};
+
+enum MENU_IDS
+{
+	MENU_MAIN = 0,
+	MENU_OPTIONS,
+	MENU_MODES,
+	MENU_TIMINGS,
+	MENU_REGISTERS,
+};
+
+//-----------------------------------------------------------------------------
+// Types and structures
+//-----------------------------------------------------------------------------
+
 // Test function callback
 typedef void (*cbTest)(u8);
 
-//
+// Timing test function information
 struct TestTime
 {
 	cbTest    Function;				// Test function pointer
@@ -40,7 +72,7 @@ struct TestTime
 	const c8* Text;					// Description
 };
 
-//
+// Screen mode information
 struct ScreenMode
 {
 	const c8* Code;
@@ -49,11 +81,25 @@ struct ScreenMode
 	u8        Mode;
 };
 
+// Register edit information
+struct RegisterEdit
+{
+	bool Active;
+	u8   Type;
+	u8   Number;
+	u8   Value;
+};
+
+//-----------------------------------------------------------------------------
+// Functions prototype
+//-----------------------------------------------------------------------------
+
 // Menu functions prototypes
 const c8* MenuAction_Mode(u8 op, i8 value);
 const c8* MenuAction_Time(u8 op, i8 value);
 const c8* MenuAction_Count(u8 op, i8 value);
 const c8* MenuAction_Test(u8 op, i8 value);
+const c8* MenuAction_Reg(u8 op, i8 value);
 const c8* MenuAction_Name(u8 op, i8 value);
 void MenuInit_Main();
 void MenuInit_Sub();
@@ -110,91 +156,105 @@ const struct ScreenMode g_Mode[] =
 	{ "YJK", "S12", "GM7 + YJK (SC12)",          VDP_MODE_SCREEN12 },
 };
 
-enum MENU_IDS
-{
-	MENU_MAIN = 0,
-	MENU_OPTIONS,
-	MENU_MODES,
-	MENU_TIMINGS,
-};
-
 // Menu main page
 const MenuItem g_MenuMain[] =
 {
-	{ "Mode",     MENU_ITEM_ACTION, MenuAction_Mode,  0 },
-	{ "Timing",   MENU_ITEM_ACTION, MenuAction_Time,  0 },
-	{ "Options>", MENU_ITEM_GOTO,   NULL,             MENU_OPTIONS },
-	{ NULL,       MENU_ITEM_EMPTY,  NULL,             0 },
-	{ "Test",     MENU_ITEM_ACTION, MenuAction_Test,  0 },
-	{ "Test All", MENU_ITEM_ACTION, MenuAction_Test,  1 },
-	{ "Report",   MENU_ITEM_ACTION, MenuAction_Test,  2 },
-	{ "Reset",    MENU_ITEM_ACTION, MenuAction_Test,  3 },
+	{ "Mode",      MENU_ITEM_ACTION, MenuAction_Mode,    0 },
+	{ "Timing",    MENU_ITEM_ACTION, MenuAction_Time,    0 },
+	{ "Count",     MENU_ITEM_ACTION, MenuAction_Count,   0 },
+	{ "Options>",  MENU_ITEM_GOTO,   NULL,               MENU_OPTIONS },
+	{ NULL,        MENU_ITEM_EMPTY,  NULL,               0 },
+	{ "Test",      MENU_ITEM_ACTION, MenuAction_Test,    0 },
+	{ "Test All",  MENU_ITEM_ACTION, MenuAction_Test,    1 },
+	{ "Report",    MENU_ITEM_ACTION, MenuAction_Test,    2 },
+	{ "Reset",     MENU_ITEM_ACTION, MenuAction_Test,    3 },
 };
 
 // Options menu
 const MenuItem g_MenuOption[] =
 {
-	{ "Name",     MENU_ITEM_ACTION, MenuAction_Name,  0 },
-	{ "Modes>",   MENU_ITEM_GOTO,   NULL,             MENU_MODES },
-	{ "Timings>", MENU_ITEM_GOTO,   NULL,             MENU_TIMINGS },
-	{ "Sprite",   MENU_ITEM_BOOL,   &g_DisplaySprite, 0 },
-	{ "Screen",   MENU_ITEM_BOOL,   &g_DisplayScreen, 0 },
-	{ "Count",    MENU_ITEM_ACTION, MenuAction_Count, 0 },
-	{ "Waits",    MENU_ITEM_INT,    &g_TimeOffset,    0 },
-	{ NULL,       MENU_ITEM_EMPTY,  NULL,             0 },
-	{ "<Back",    MENU_ITEM_GOTO,   NULL,             MENU_MAIN },
+	{ "Name",      MENU_ITEM_ACTION, MenuAction_Name,    0 },
+	{ "Modes>",    MENU_ITEM_GOTO,   NULL,               MENU_MODES },
+	{ "Timings>",  MENU_ITEM_GOTO,   NULL,               MENU_TIMINGS },
+	{ "Sprite",    MENU_ITEM_BOOL,   &g_DisplaySprite,   0 },
+	{ "Screen",    MENU_ITEM_BOOL,   &g_DisplayScreen,   0 },
+	{ "Waits",     MENU_ITEM_INT,    &g_TimeOffset,      0 },
+	{ "Register>", MENU_ITEM_GOTO,   NULL,               MENU_REGISTERS },
+	{ NULL,        MENU_ITEM_EMPTY,  NULL,               0 },
+	{ "<Back",     MENU_ITEM_GOTO,   NULL,               MENU_MAIN },
 };
 
 // Screen mode selection menu
 const MenuItem g_MenuMode[] =
 {
-	{ "T1",       MENU_ITEM_BOOL,   &g_SelectModes[0],  0 },
-	{ "G1",       MENU_ITEM_BOOL,   &g_SelectModes[1],  0 },
-	{ "G2",       MENU_ITEM_BOOL,   &g_SelectModes[2],  0 },
-	{ "MC",       MENU_ITEM_BOOL,   &g_SelectModes[3],  0 },
-	{ "T2",       MENU_ITEM_BOOL,   &g_SelectModes[4],  0 },
-	{ "G3",       MENU_ITEM_BOOL,   &g_SelectModes[5],  0 },
-	{ "G4",       MENU_ITEM_BOOL,   &g_SelectModes[6],  0 },
-	{ "G5",       MENU_ITEM_BOOL,   &g_SelectModes[7],  0 },
-	{ "G6",       MENU_ITEM_BOOL,   &g_SelectModes[8],  0 },
-	{ "G7",       MENU_ITEM_BOOL,   &g_SelectModes[9],  0 },
-	{ "YAE",      MENU_ITEM_BOOL,   &g_SelectModes[10], 0 },
-	{ "YJK",      MENU_ITEM_BOOL,   &g_SelectModes[11], 0 },
-	{ NULL,       MENU_ITEM_EMPTY,  NULL,               0 },
-	{ "<Back",    MENU_ITEM_GOTO,   NULL,               MENU_OPTIONS },
+	{ "T1",        MENU_ITEM_BOOL,   &g_SelectModes[0],  0 },
+	{ "G1",        MENU_ITEM_BOOL,   &g_SelectModes[1],  0 },
+	{ "G2",        MENU_ITEM_BOOL,   &g_SelectModes[2],  0 },
+	{ "MC",        MENU_ITEM_BOOL,   &g_SelectModes[3],  0 },
+	{ "T2",        MENU_ITEM_BOOL,   &g_SelectModes[4],  0 },
+	{ "G3",        MENU_ITEM_BOOL,   &g_SelectModes[5],  0 },
+	{ "G4",        MENU_ITEM_BOOL,   &g_SelectModes[6],  0 },
+	{ "G5",        MENU_ITEM_BOOL,   &g_SelectModes[7],  0 },
+	{ "G6",        MENU_ITEM_BOOL,   &g_SelectModes[8],  0 },
+	{ "G7",        MENU_ITEM_BOOL,   &g_SelectModes[9],  0 },
+	{ "YAE",       MENU_ITEM_BOOL,   &g_SelectModes[10], 0 },
+	{ "YJK",       MENU_ITEM_BOOL,   &g_SelectModes[11], 0 },
+	{ NULL,        MENU_ITEM_EMPTY,  NULL,               0 },
+	{ "<Back",     MENU_ITEM_GOTO,   NULL,               MENU_OPTIONS },
 };
 
 // Screen mode selection menu
 const MenuItem g_MenuTime[] =
 {
-	{ "12 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[0],  0 },
-	{ "14 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[1],  0 },
-	{ "17 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[2],  0 },
-	{ "18 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[3],  0 },
-	{ "19 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[4],  0 },
-	{ "20 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[5],  0 },
-	{ "21 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[6],  0 },
-	{ "22 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[7],  0 },
-	{ "23 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[8],  0 },
-	{ "24 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[9],  0 },
-	{ "25 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[10], 0 },
-	{ "26 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[11], 0 },
-	{ "27 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[12], 0 },
-	{ "28 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[13], 0 },
-	{ "29 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[14], 0 },
-	{ "30 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[15], 0 },
-	// { "31 TS",    MENU_ITEM_BOOL,   &g_SelectTimes[16], 0 },
-	{ NULL,       MENU_ITEM_EMPTY,  NULL,               0 },
-	{ "<Back",    MENU_ITEM_GOTO,   NULL,               MENU_OPTIONS },
+	{ "12 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[0],  0 },
+	{ "14 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[1],  0 },
+	{ "17 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[2],  0 },
+	{ "18 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[3],  0 },
+	{ "19 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[4],  0 },
+	{ "20 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[5],  0 },
+	{ "21 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[6],  0 },
+	{ "22 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[7],  0 },
+	{ "23 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[8],  0 },
+	{ "24 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[9],  0 },
+	{ "25 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[10], 0 },
+	{ "26 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[11], 0 },
+	{ "27 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[12], 0 },
+	{ "28 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[13], 0 },
+	{ "29 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[14], 0 },
+	{ "30 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[15], 0 },
+	// { "31 TS",     MENU_ITEM_BOOL,   &g_SelectTimes[16], 0 },
+	{ NULL,        MENU_ITEM_EMPTY,  NULL,               0 },
+	{ "<Back",     MENU_ITEM_GOTO,   NULL,               MENU_OPTIONS },
+};
+
+// 
+const MenuItem g_MenuRegister[] =
+{
+	{ "Index",     MENU_ITEM_ACTION, MenuAction_Reg,     10 },
+	{ "Active",    MENU_ITEM_ACTION, MenuAction_Reg,     11 },
+	{ "Type",      MENU_ITEM_ACTION, MenuAction_Reg,     12 },
+	{ "Register",  MENU_ITEM_ACTION, MenuAction_Reg,     13 },
+	{ "Bit #0",    MENU_ITEM_ACTION, MenuAction_Reg,     0 },
+	{ "Bit #1",    MENU_ITEM_ACTION, MenuAction_Reg,     1 },
+	{ "Bit #2",    MENU_ITEM_ACTION, MenuAction_Reg,     2 },
+	{ "Bit #3",    MENU_ITEM_ACTION, MenuAction_Reg,     3 },
+	{ "Bit #4",    MENU_ITEM_ACTION, MenuAction_Reg,     4 },
+	{ "Bit #5",    MENU_ITEM_ACTION, MenuAction_Reg,     5 },
+	{ "Bit #6",    MENU_ITEM_ACTION, MenuAction_Reg,     6 },
+	{ "Bit #7",    MENU_ITEM_ACTION, MenuAction_Reg,     7 },
+	{ NULL,        MENU_ITEM_EMPTY,  NULL,               0 },
+	{ "Clear all", MENU_ITEM_ACTION, MenuAction_Reg,     20 },
+	{ "<Back",     MENU_ITEM_GOTO,   NULL,               MENU_OPTIONS },
 };
 
 // Menu pages configuration
 const Menu g_Menus[] =
 {
-	{ NULL, g_MenuMain,   numberof(g_MenuMain),   MenuInit_Main }, // MENU_MAIN
-	{ NULL, g_MenuOption, numberof(g_MenuOption), MenuInit_Sub  }, // MENU_OPTIONS
-	{ NULL, g_MenuMode,   numberof(g_MenuMode),   MenuInit_Sub  }, // MENU_MODES
-	{ NULL, g_MenuTime,   numberof(g_MenuTime),   MenuInit_Sub  }, // MENU_TIMINGS
+	{ NULL, g_MenuMain,     numberof(g_MenuMain),     MenuInit_Main }, // MENU_MAIN
+	{ NULL, g_MenuOption,   numberof(g_MenuOption),   MenuInit_Sub  }, // MENU_OPTIONS
+	{ NULL, g_MenuMode,     numberof(g_MenuMode),     MenuInit_Sub  }, // MENU_MODES
+	{ NULL, g_MenuTime,     numberof(g_MenuTime),     MenuInit_Sub  }, // MENU_TIMINGS
+	{ NULL, g_MenuRegister, numberof(g_MenuRegister), MenuInit_Sub  }, // MENU_TIMINGS
 };
 
 // States data
@@ -202,7 +262,7 @@ const FSM_State State_Menu =	{ 0, State_Menu_Begin,   State_Menu_Update,   NULL 
 const FSM_State State_Report =	{ 0, State_Report_Begin, State_Report_Update, NULL };
 
 //                                             T1  G1  G2  MC  T2  G3  G4  G5  G6  G7  YAE YJK
-const u8 g_ModeLimitMSX1[numberof(g_Mode)] = { 12, 29, 29, 13, -1, -1, -1, -1, -1, -1, -1, -1 };
+const u8 g_ModeLimitMSX1[numberof(g_Mode)] = { 12, 29, 29, 13, 99, 99, 99, 99, 99, 99, 99, 99 };
 const u8 g_ModeLimitMSX2[numberof(g_Mode)] = { 20, 15, 15, 15, 20, 15, 15, 15, 15, 15, 15, 15 };
 
 // Is default test function for MSX1 machine
@@ -311,7 +371,12 @@ u16  g_TestMin;						//
 u16  g_TestMax;						// 
 
 c8 g_StringBuffer[64];
+c8 g_NameBuffer[64];
 const c8* g_MachineName;
+
+struct RegisterEdit g_RegEdit[REG_EDIT_NUM];
+u8 g_RegEditIdx;
+
 //-----------------------------------------------------------------------------
 // Report table
 //-----------------------------------------------------------------------------
@@ -331,6 +396,44 @@ ResultTable* g_CurResult;			// Index of the result to display
 //=============================================================================
 // FUNCTIONS
 //=============================================================================
+
+//-----------------------------------------------------------------------------
+// 
+void RegReset(struct RegisterEdit* reg)
+{
+	Mem_Set(0, reg, sizeof(struct RegisterEdit));
+}
+
+//-----------------------------------------------------------------------------
+// 
+void RegApply(struct RegisterEdit* reg)
+{
+	if(!reg->Active)
+		return;
+
+	switch(reg->Type)
+	{
+	case REG_EDIT_SET:
+		VDP_RegWriteBak(reg->Number, reg->Value);
+		break;
+
+	case REG_EDIT_AND:
+	{
+		u8 value = g_VDP_REGSAV[reg->Number];
+		value &= reg->Value;
+		VDP_RegWriteBak(reg->Number, value);
+		break;
+	}
+
+	case REG_EDIT_OR:
+	{
+		u8 value = g_VDP_REGSAV[reg->Number];
+		value |= reg->Value;
+		VDP_RegWriteBak(reg->Number, value);
+		break;
+	}
+	}
+}
 
 //-----------------------------------------------------------------------------
 // Get MSX version
@@ -383,18 +486,18 @@ c8 GetCharacter()
 const c8* GetStringAt(u8 x, u8 y)
 {
 	Print_SetPosition(x, y);
-	c8* ptr = g_StringBuffer;
+	c8* ptr = g_NameBuffer;
 	c8 chr = 0;
 	while(chr != ASCII_RETURN)
 	{
 		chr = GetCharacter();
-		if((chr == ASCII_BS) && (ptr > g_StringBuffer))
+		if((chr == ASCII_BS) && (ptr > g_NameBuffer))
 		{
 			Print_Backspace(1);
 			ptr--;
 		}
 
-		if((chr == ASCII_SPACE) && (ptr == g_StringBuffer))
+		if((chr == ASCII_SPACE) && (ptr == g_NameBuffer))
 			continue;
 
 		if((chr >= ASCII_SPACE) && (chr <= '~'))
@@ -405,7 +508,7 @@ const c8* GetStringAt(u8 x, u8 y)
 		}
 	}
 	*ptr = 0;
-	return g_StringBuffer;
+	return g_NameBuffer;
 }
 
 //-----------------------------------------------------------------------------
@@ -427,6 +530,10 @@ void Test(u8 mode, u8 time)
 		VDP_EnableSprite(g_DisplaySprite);
 	}
 	VDP_EnableDisplay(g_DisplayScreen);
+
+	// Custom register edit
+	for(u8 i = 0; i < REG_EDIT_NUM; ++i)
+		RegApply(&g_RegEdit[i]);
 
 	// Init value
 	g_TestTotal = 0; // Max 
@@ -664,6 +771,88 @@ const c8* MenuAction_Test(u8 op, i8 value)
 
 //-----------------------------------------------------------------------------
 // 
+const c8* MenuAction_Reg(u8 op, i8 value)
+{
+	struct RegisterEdit* reg = &g_RegEdit[g_RegEditIdx];
+
+	switch(value)
+	{
+	case 0: // Bit #0
+	case 1: // Bit #1
+	case 2: // Bit #2
+	case 3: // Bit #3
+	case 4: // Bit #4
+	case 5: // Bit #5
+	case 6: // Bit #6
+	case 7: // Bit #7
+	{
+		u8 flag = 1 << value;
+		if((op == MENU_ACTION_INC) || (op == MENU_ACTION_DEC) || (op == MENU_ACTION_SET))
+		{
+			if(reg->Value & flag)
+				reg->Value &= ~flag;
+			else
+				reg->Value |= flag;
+		}
+		return (reg->Value & flag) ? "\x0C" : "\x0B";
+	}
+
+	case 10: // Index
+		if((g_RegEditIdx < REG_EDIT_NUM - 1) && ((op == MENU_ACTION_INC) || (op == MENU_ACTION_SET)))
+		{
+			g_RegEditIdx++;
+			Menu_SetDirty();
+		}
+		if((g_RegEditIdx > 0) && (op == MENU_ACTION_DEC))
+		{
+			g_RegEditIdx--;
+			Menu_SetDirty();
+		}
+		String_Format(g_StringBuffer, "%i", g_RegEditIdx);
+		return g_StringBuffer;
+
+	case 11: // Active
+	{
+		if((op == MENU_ACTION_INC) || (op == MENU_ACTION_DEC) || (op == MENU_ACTION_SET))
+			reg->Active = !reg->Active;
+		return reg->Active ? "\x0C" : "\x0B";
+	}
+
+	case 12: // Type
+		if((reg->Type < 2) && ((op == MENU_ACTION_INC) || (op == MENU_ACTION_SET)))
+			reg->Type++;
+		else if((reg->Type > 0) && (op == MENU_ACTION_DEC))
+			reg->Type--;
+		switch(reg->Type)
+		{
+		case REG_EDIT_SET:	return "SET";
+		case REG_EDIT_AND:	return "AND";
+		case REG_EDIT_OR:	return "OR";
+		}
+		break;
+
+	case 13: // Register
+		if((op == MENU_ACTION_INC) || (op == MENU_ACTION_SET))
+			reg->Number++;
+		if(op == MENU_ACTION_DEC)
+			reg->Number--;
+		String_Format(g_StringBuffer, "%i", reg->Number);
+		return g_StringBuffer;
+
+	case 20: // Clear
+		if(op == MENU_ACTION_SET)
+		{
+			for(u8 i = 0; i < REG_EDIT_NUM; ++i)
+				RegReset(&g_RegEdit[i]);
+			Menu_SetDirty();
+		}
+		break;
+	}
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// 
 void MenuInit_Sub()
 {
 	Print_Clear();
@@ -692,7 +881,7 @@ void State_Menu_Begin()
 
 	// Menu
 	Menu_Initialize(g_Menus);
-	Menu_DrawPage(0);
+	Menu_DrawPage(MENU_MAIN);
 
 	// Print_DrawLineH(0, 16, 40);
 }
@@ -822,6 +1011,7 @@ u8 main(u8 argc, const c8** argv)
 	VDP_ClearVRAM();
 	if(g_VDP >= VDP_VERSION_V9958)
 		VDP_RegWriteBak(25, 0); // Reset MSX2+ R#25 register (to work around wrong MSX2+ BIOS for Omega)
+	Bios_SetKeyClick(FALSE);
 
 	// Initialize font
 	Print_SetTextFont(g_Font_MGL_Sample6, 0);
@@ -852,7 +1042,7 @@ u8 main(u8 argc, const c8** argv)
 	g_IterationCount = 4;
 	g_TimeOffset = 0;
 	g_DestAddr = VDP_GetLayoutTable() + (40 * 17);
-	const bool* defaultTime;
+	const bool* defaultTime = NULL;
 	switch(g_VDP)
 	{
 	case VDP_VERSION_TMS9918A:
@@ -879,6 +1069,10 @@ u8 main(u8 argc, const c8** argv)
 	g_CurTime = 0;
 	for(u8 i = 0; i < numberof(g_Mode); ++i)
 		g_SelectModes[i] = TRUE;
+
+	g_RegEditIdx = 0;
+	for(u8 i = 0; i < REG_EDIT_NUM; ++i)
+		RegReset(&g_RegEdit[i]);
 
 	Reset();
 	FSM_SetState(&State_Menu);
