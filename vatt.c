@@ -25,7 +25,7 @@
 //-----------------------------------------------------------------------------
 
 // Version
-#define APP_VERSION "0.12"
+#define APP_VERSION					"1.0"
 
 // VRAM access counter
 #define TEST_COUNT					256
@@ -176,8 +176,9 @@ const MenuItem g_MenuOption[] =
 	{ "Name",      MENU_ITEM_ACTION, MenuAction_Name,    0 },
 	{ "Modes>",    MENU_ITEM_GOTO,   NULL,               MENU_MODES },
 	{ "Timings>",  MENU_ITEM_GOTO,   NULL,               MENU_TIMINGS },
-	{ "Sprite",    MENU_ITEM_BOOL,   &g_DisplaySprite,   0 },
 	{ "Screen",    MENU_ITEM_BOOL,   &g_DisplayScreen,   0 },
+	{ "Sprite",    MENU_ITEM_BOOL,   &g_DisplaySprite,   0 },
+	{ "Command",   MENU_ITEM_BOOL,   &g_ExecCommand,     0 },
 	{ "Waits",     MENU_ITEM_INT,    &g_TimeOffset,      0 },
 	{ "Register>", MENU_ITEM_GOTO,   NULL,               MENU_REGISTERS },
 	{ NULL,        MENU_ITEM_EMPTY,  NULL,               0 },
@@ -356,8 +357,9 @@ const struct VDP_Sprite g_SpriteAttr[32] =
 u8   g_VDP;							// Detected VDP version
 u8   g_CurMode;						// Current Screen mode
 u8   g_CurTime;						// Selected access time
-bool g_DisplaySprite;				// Display sprite
 bool g_DisplayScreen;				// Blank the screen
+bool g_DisplaySprite;				// Display sprite
+bool g_ExecCommand;					// Execute VDP command
 u16  g_DestAddr;					// VRAM destination address
 u8   g_ModeNum;						// Number of available modes (depend of VDP version)
 u8   g_IterationCount;				// Iteration counter
@@ -528,6 +530,11 @@ void Test(u8 mode, u8 time)
 	{
 		VDP_RegWrite(14, 0);
 		VDP_EnableSprite(g_DisplaySprite);
+		if(g_ExecCommand)
+		{
+			VDP_CommandSTOP();
+			VDP_CommandLMMV(0, 0, 512, 1024, 0x00, VDP_OP_OR); // zero-OR all the VRAM
+		}
 	}
 	VDP_EnableDisplay(g_DisplayScreen);
 
@@ -911,7 +918,9 @@ void State_Report_Begin()
 {
 	DisplayHeader();
 	Print_SetPosition(1, 5);
-	Print_DrawFormat("Count:%sx%i Sprite:%c Screen:%c", g_IterationText[g_IterationCount], TEST_COUNT, g_DisplaySprite ? 0x0C : 0x0B, g_DisplayScreen ? 0x0C : 0x0B);
+	Print_DrawFormat("Count:%sx%i Screen:%c", g_IterationText[g_IterationCount], TEST_COUNT, g_DisplayScreen ? 0x0C : 0x0B);
+	if(g_VDP > VDP_VERSION_TMS9918A)
+		Print_DrawFormat(" Sprite:%c Cmd:%c", g_DisplaySprite ? 0x0C : 0x0B, g_ExecCommand ? 0x0C : 0x0B);
 
 	u8 x = 4;
 	u8 y = 7;
@@ -1037,8 +1046,9 @@ u8 main(u8 argc, const c8** argv)
 	VDP_FillVRAM_16K(COLOR_LIGHT_RED, 0x1800, 0x200);
 
 	// Initialize variables
-	g_DisplaySprite = TRUE;
 	g_DisplayScreen = TRUE;
+	g_DisplaySprite = TRUE;
+	g_ExecCommand = FALSE;
 	g_IterationCount = 4;
 	g_TimeOffset = 0;
 	g_DestAddr = VDP_GetLayoutTable() + (40 * 17);

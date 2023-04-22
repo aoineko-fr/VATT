@@ -110,7 +110,7 @@ Target = "ROM_32K";
 // USRAddr = 0xC000;
 
 //-- Parse MSX-DOS command-line arguments
-// DOSParseArg = false;
+DOSParseArg = true;
 
 //*******************************************************************************
 // SIGNATURE SETTINGS
