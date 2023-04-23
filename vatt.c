@@ -25,7 +25,7 @@
 //-----------------------------------------------------------------------------
 
 // Version
-#define APP_VERSION					"1.0"
+#define APP_VERSION					"1.1"
 
 // VRAM access counter
 #define TEST_COUNT					256
@@ -530,11 +530,11 @@ void Test(u8 mode, u8 time)
 	{
 		VDP_RegWrite(14, 0);
 		VDP_EnableSprite(g_DisplaySprite);
-		if(g_ExecCommand)
-		{
-			VDP_CommandSTOP();
-			VDP_CommandLMMV(0, 0, 512, 1024, 0x00, VDP_OP_OR); // zero-OR all the VRAM
-		}
+		// if(g_ExecCommand)
+		// {
+		// 	VDP_CommandSTOP();
+		// 	VDP_CommandLMMV(0, 0, 512, 1024, 0x00, VDP_OP_OR); // zero-OR all the VRAM
+		// }
 	}
 	VDP_EnableDisplay(g_DisplayScreen);
 
@@ -551,6 +551,12 @@ void Test(u8 mode, u8 time)
 
 	for(u8 j = 0; j < itNum; ++j)
 	{
+		if((g_VDP > VDP_VERSION_TMS9918A) && g_ExecCommand)
+		{
+			VDP_CommandSTOP();
+			VDP_CommandLMMV(0, 0, 256, 256, 0x00, VDP_OP_OR); // zero-OR all the VRAM
+		}
+
 		// Write reference
 		DisableInterrupt();
 		SetWriteVRAM(g_DestAddr);
