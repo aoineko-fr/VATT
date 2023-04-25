@@ -25,7 +25,7 @@
 //-----------------------------------------------------------------------------
 
 // Version
-#define APP_VERSION					"1.1"
+#define APP_VERSION					"1.2"
 
 // VRAM access counter
 #define TEST_COUNT					256
@@ -46,8 +46,11 @@ enum REG_EDIT
 	REG_EDIT_SET,
 	REG_EDIT_AND,
 	REG_EDIT_OR,
+	//-------------------------
+	REG_EDIT_MAX,
 };
 
+//
 enum MENU_IDS
 {
 	MENU_MAIN = 0,
@@ -55,6 +58,18 @@ enum MENU_IDS
 	MENU_MODES,
 	MENU_TIMINGS,
 	MENU_REGISTERS,
+	//-------------------------
+	MENU_MAX,
+};
+
+//
+enum CMD_OPTION
+{
+	CMD_OFF = 0,
+	CMD_OVERLAP,
+	CMD_SEPERATE,
+	//-------------------------
+	CMD_MAX,
 };
 
 //-----------------------------------------------------------------------------
@@ -101,6 +116,8 @@ const c8* MenuAction_Count(u8 op, i8 value);
 const c8* MenuAction_Test(u8 op, i8 value);
 const c8* MenuAction_Reg(u8 op, i8 value);
 const c8* MenuAction_Name(u8 op, i8 value);
+const c8* MenuAction_Sprite(u8 op, i8 value);
+const c8* MenuAction_Command(u8 op, i8 value);
 void MenuInit_Main();
 void MenuInit_Sub();
 
@@ -177,8 +194,8 @@ const MenuItem g_MenuOption[] =
 	{ "Modes>",    MENU_ITEM_GOTO,   NULL,               MENU_MODES },
 	{ "Timings>",  MENU_ITEM_GOTO,   NULL,               MENU_TIMINGS },
 	{ "Screen",    MENU_ITEM_BOOL,   &g_DisplayScreen,   0 },
-	{ "Sprite",    MENU_ITEM_BOOL,   &g_DisplaySprite,   0 },
-	{ "Command",   MENU_ITEM_BOOL,   &g_ExecCommand,     0 },
+	{ "Sprite",    MENU_ITEM_ACTION, MenuAction_Sprite,  0 },
+	{ "Command",   MENU_ITEM_ACTION, MenuAction_Command, 0 },
 	{ "Waits",     MENU_ITEM_INT,    &g_TimeOffset,      0 },
 	{ "Register>", MENU_ITEM_GOTO,   NULL,               MENU_REGISTERS },
 	{ NULL,        MENU_ITEM_EMPTY,  NULL,               0 },
@@ -359,7 +376,8 @@ u8   g_CurMode;						// Current Screen mode
 u8   g_CurTime;						// Selected access time
 bool g_DisplayScreen;				// Blank the screen
 bool g_DisplaySprite;				// Display sprite
-bool g_ExecCommand;					// Execute VDP command
+u8   g_ExecCommand;					// Execute VDP command
+u16  g_CommandY;
 u16  g_DestAddr;					// VRAM destination address
 u8   g_ModeNum;						// Number of available modes (depend of VDP version)
 u8   g_IterationCount;				// Iteration counter
@@ -522,23 +540,15 @@ void Test(u8 mode, u8 time)
 	VDP_SetSpritePatternTable(0x3800);
 	VDP_SetSpriteAttributeTable(0x1A00);
 
-	// MSX 1
-	if(g_VDP == VDP_VERSION_TMS9918A)
-		VDP_SetSpritePositionY(0, g_DisplaySprite ? 0 : VDP_SPRITE_DISABLE_SM1);
 	// MSX 2/2+/turbo R
-	else
+	if(g_VDP > VDP_VERSION_TMS9918A)
 	{
 		VDP_RegWrite(14, 0);
 		VDP_EnableSprite(g_DisplaySprite);
-		// if(g_ExecCommand)
-		// {
-		// 	VDP_CommandSTOP();
-		// 	VDP_CommandLMMV(0, 0, 512, 1024, 0x00, VDP_OP_OR); // zero-OR all the VRAM
-		// }
 	}
 	VDP_EnableDisplay(g_DisplayScreen);
 
-	// Custom register edit
+	// Apply register modifiers
 	for(u8 i = 0; i < REG_EDIT_NUM; ++i)
 		RegApply(&g_RegEdit[i]);
 
@@ -549,12 +559,13 @@ void Test(u8 mode, u8 time)
 	u8 itNum = 1 << g_IterationCount; // Compute iteration number
 	cbTest cb = g_Time[time].Function;
 
+	// Test iteration
 	for(u8 j = 0; j < itNum; ++j)
 	{
-		if((g_VDP > VDP_VERSION_TMS9918A) && g_ExecCommand)
+		if((g_VDP > VDP_VERSION_TMS9918A) && (g_ExecCommand > 0))
 		{
 			VDP_CommandSTOP();
-			VDP_CommandLMMV(0, 0, 256, 256, 0x00, VDP_OP_OR); // zero-OR all the VRAM
+			VDP_CommandLMMV(0, g_CommandY, 256, 256, 0x00, VDP_OP_OR); // zero-OR all the VRAM
 		}
 
 		// Write reference
@@ -728,6 +739,62 @@ const c8* MenuAction_Name(u8 op, i8 value)
 	}
 
 	return g_MachineName;
+}
+
+//-----------------------------------------------------------------------------
+// 
+const c8* MenuAction_Sprite(u8 op, i8 value)
+{
+	value;
+
+	if(g_VDP == VDP_VERSION_TMS9918A)
+		return "(for MSX2 or above)";
+
+	switch(op)
+	{
+	case MENU_ACTION_SET:
+	case MENU_ACTION_INC:
+	case MENU_ACTION_DEC:
+		g_DisplaySprite = !g_DisplaySprite;
+		break;
+	}
+
+	return g_DisplaySprite ? "\x0C" : "\x0B";
+}
+
+//-----------------------------------------------------------------------------
+// 
+const c8* MenuAction_Command(u8 op, i8 value)
+{
+	value;
+
+	if(g_VDP == VDP_VERSION_TMS9918A)
+		return "(for MSX2 or above)";
+
+	switch(op)
+	{
+	case MENU_ACTION_SET:
+	case MENU_ACTION_INC:
+		g_ExecCommand = (g_ExecCommand + 1) % CMD_MAX;
+		break;
+	case MENU_ACTION_DEC:
+		g_ExecCommand = (g_ExecCommand + CMD_MAX - 1) % CMD_MAX;
+		break;
+	}
+
+	switch(g_ExecCommand)
+	{
+	case CMD_OVERLAP:
+		g_CommandY = 0;
+		return "Overlap";
+	case CMD_SEPERATE:
+		g_CommandY = 256;
+		return "Sperate";
+	case CMD_OFF:
+		return "Off";
+	}
+
+	return NULL;
 }
 
 
