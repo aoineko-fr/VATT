@@ -8,12 +8,15 @@ Until now, the reference in terms of VRAM access time was those defined on the M
 The problem was that these numbers did not always match the observations. 
 So I created this tool to allow the MSX community to have a way to objectively analyze the actual timing under different conditions.
 
+You can find the results here: https://aoineko.org/msxgl/index.php?title=VRAM_access_timing
+
 ## How?
 
 VATT uses a simple method to test access times:
 - It writes 256 characters (empty circles) slowly (29 t-states between each writing, which is known to be reliable even in the worst case scenario).
 - On top of that, it writes 256 characters (filled circle) with different assembly code more or less fast (from 12 to 29 t-states).
 - It reads slowly (more than 29 t-states) the 256 characters and counts the number of full circles. If there are less than 256, it means that some writing has been lost because of lack of time.
+- Repeat these steps N times (between 1 and 128) and calculate an average, a minimum and a maximum.
 
 And voila! we can test these different writing speeds in a multitude of contexts: each screen mode, activation or not of sprites, activation or not of display, and that, for each generation of MSX VDP.
 
@@ -36,13 +39,22 @@ Screen modes:
 - Graphic mode 7 + YJK (Screen 12)
 
 Fill instructions:
-- 12 TS - `out(n),a`
-- 14 TS - `out(c),a`
-- 17 TS - `out(n),a; nop`
-- 19 TS - `out(c),a; nop`
-- 20 TS - `out(n),a; or 0`
-- 22 TS - `out(n),a; nop; nop`
-- 29 TS - `out(n),a; or 0; djnz`
+- 12 TS - `out (n),a`
+- 14 TS - `out (c),a`
+- 17 TS - `out (n),a; nop`
+- 18 TS - `outi`
+- 19 TS - `out (c),a; nop`
+- 20 TS - `out (n),a; cp (hl)`
+- 21 TS - `out (c),a; inc de`
+- 22 TS - `out (c),a; cp (hl)`
+- 23 TS - `otir`
+- 24 TS - `out (n),a; inc (hl)`
+- 25 TS - `outi; inc de`
+- 26 TS - `out (n),a; djnz`
+- 27 TS - `out (n),a; cp (hl); inc de`
+- 28 TS - `out (n),a; cp (hl); cp (hl)`
+- 29 TS - `outi; jp nz`
+- 30 TS - `out (c),a; cp (hl); cp (hl)`
 
 Sprites:
 - Enable (32 sprites displayed on screen during testing)
