@@ -43,7 +43,7 @@ ProjModules = [ "test", ProjName ];
 // ProjSegments = "";
 
 //-- List of library modules to build (array)
-LibModules = [ "string", "fsm", "game_menu", "system", "bios", "vdp", "print", "input", "memory" ];
+LibModules = [ "string", "fsm", "game_menu", "bios", "vdp", "print", "input", "memory" ];
 
 //-- Additional sources to be compiled and linked with the project (array)
 // AddSources = [];
@@ -51,13 +51,15 @@ LibModules = [ "string", "fsm", "game_menu", "system", "bios", "vdp", "print", "
 //-- Target MSX machine version (string)
 //   - 1        MSX 1
 //   - 2        MSX 2
-//   - 12       MSX 1 or 2 (dual support)
+//   - 12       MSX 1 and 2 (multi support)
 //   - 2K       Korean MSX 2 (SC9 support)
 //   - 2P       MSX 2+
-//   - 12P      MSX 1, 2 or 2+
+//   - 22P      MSX 2 and 2+ (multi support)
+//   - 122P     MSX 1, 2 and 2+ (multi support)
+//   - 0        MSX 0
 //   - TR       MSX turbo R
 //   - 3        MSX 3 (reserved)
-Machine = "12P";
+Machine = "122P";
 
 //-- Target program format (string)
 //   - BIN              .bin    BASIC binary program (8000h~)
@@ -136,10 +138,10 @@ AppID = "VT";
 BuildLibrary = true;
 
 //-- Prepare program for debug (boolean)
-// Debug = false;
+Debug = true;
 
 //-- Move debug symbols to deployement folder (boolean)
-// DebugSymbols = false;
+DebugSymbols = true;
 
 //-- Assembler code optimizer (string)
 //   - None

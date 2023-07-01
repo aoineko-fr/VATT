@@ -25,7 +25,7 @@
 //-----------------------------------------------------------------------------
 
 // Version
-#define APP_VERSION					"1.2"
+#define APP_VERSION					"1.3"
 
 // VRAM access counter
 #define TEST_COUNT					256
@@ -196,7 +196,9 @@ const MenuItem g_MenuOption[] =
 	{ "Screen",    MENU_ITEM_BOOL,   &g_DisplayScreen,   0 },
 	{ "Sprite",    MENU_ITEM_ACTION, MenuAction_Sprite,  0 },
 	{ "Command",   MENU_ITEM_ACTION, MenuAction_Command, 0 },
-	{ "Waits",     MENU_ITEM_INT,    &g_TimeOffset,      0 },
+	{ "Quick",     MENU_ITEM_BOOL,   &g_QuickMode,       0 },
+	{ "V-Synch",   MENU_ITEM_BOOL,   &g_WaitVSynch,      0 },
+	{ "Waits TS",  MENU_ITEM_INT,    &g_TimeOffset,      0 },
 	{ "Register>", MENU_ITEM_GOTO,   NULL,               MENU_REGISTERS },
 	{ NULL,        MENU_ITEM_EMPTY,  NULL,               0 },
 	{ "<Back",     MENU_ITEM_GOTO,   NULL,               MENU_MAIN },
@@ -385,6 +387,8 @@ i8   g_TimeOffset;					// Iteration counter
 const u8* g_ModeLimit;				// Speed limit for each screen mdoe
 bool g_SelectTimes[numberof(g_Time)]; // 
 bool g_SelectModes[numberof(g_Mode)]; //
+bool g_QuickMode;
+bool g_WaitVSynch;
 
 u16  g_TestTotal;					// 
 u16  g_TestMin;						// 
@@ -533,7 +537,7 @@ const c8* GetStringAt(u8 x, u8 y)
 
 //-----------------------------------------------------------------------------
 // Test a given screen mode with a given test function
-void Test(u8 mode, u8 time)
+u8 Test(u8 mode, u8 time)
 {
 	VDP_SetMode(g_Mode[mode].Mode); // Set selected screen mode
 	VDP_SetColor(COLOR_MERGE(COLOR_LIGHT_RED, COLOR_DARK_RED));
@@ -567,6 +571,8 @@ void Test(u8 mode, u8 time)
 			VDP_CommandSTOP();
 			VDP_CommandLMMV(0, g_CommandY, 256, 256, 0x00, VDP_OP_OR); // zero-OR all the VRAM
 		}
+		if(g_WaitVSynch)
+			Halt();
 
 		// Write reference
 		DisableInterrupt();
@@ -609,8 +615,10 @@ void Test(u8 mode, u8 time)
 	VDP_SetColor(COLOR_MERGE(COLOR_WHITE, COLOR_BLACK));
 
 	Print_SetPosition(28, 23);
-	Print_DrawFormat("Result: %i", g_TestTotal);
-	Print_DrawText("%  ");
+	Print_DrawFormat("Result: %i%%  ", g_TestTotal);
+	// Print_DrawText("%  ");
+
+	return (u8)g_TestTotal;
 }
 
 //-----------------------------------------------------------------------------
@@ -625,7 +633,9 @@ void TestAll()
 		{
 			if(!g_SelectTimes[t])
 				continue;
-			Test(m, t);
+			u8 val = Test(m, t);
+			if(g_QuickMode && (val == 100))
+				break;
 		}
 	}
 
@@ -1122,8 +1132,10 @@ u8 main(u8 argc, const c8** argv)
 	g_DisplayScreen = TRUE;
 	g_DisplaySprite = TRUE;
 	g_ExecCommand = FALSE;
-	g_IterationCount = 4;
+	g_IterationCount = 7;
 	g_TimeOffset = 0;
+	g_QuickMode = TRUE;
+	g_WaitVSynch = FALSE;
 	g_DestAddr = VDP_GetLayoutTable() + (40 * 17);
 	const bool* defaultTime = NULL;
 	switch(g_VDP)

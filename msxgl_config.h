@@ -89,8 +89,8 @@
 #define VDP_AUTO_INIT				TRUE	// Call VDP_Initialize() at the first call to VDP_SetMode()
 #define VDP_USE_UNDOCUMENTED		FALSE	// Allow the use of undocumented screen mode (WIP)
 #define VDP_USE_VALIDATOR			TRUE	// Let the engine fix some invalid input (highly recommended)
-#define VDP_USE_DEFAULT_PALETTE		TRUE	// Add data for default MSX 2 palette
-#define VDP_USE_MSX1_PALETTE		TRUE	// Add data for default MSX 1 palette
+#define VDP_USE_DEFAULT_PALETTE		FALSE	// Add data for default MSX 2 palette
+#define VDP_USE_MSX1_PALETTE		FALSE	// Add data for default MSX 1 palette
 #define VDP_USE_DEFAULT_SETTINGS	FALSE	// Auto-initialization of common VDP feature
 #define VDP_USE_16X16_SPRITE		TRUE	// Use 16x16 sprites mode
 #define VDP_USE_RESTORE_S0			TRUE	// Do restore of status register pointer to S#0 (needed onlt for default BIOS ISR)
@@ -113,7 +113,7 @@
 //-----------------------------------------------------------------------------
 
 // Input module setting
-#define INPUT_USE_JOYSTICK			TRUE	// Add functions to handle joystick using I/O port
+#define INPUT_USE_JOYSTICK			FALSE	// Add functions to handle joystick using I/O port
 #define INPUT_USE_KEYBOARD			TRUE	// Add functions to handle keyboard using I/O port
 #define INPUT_USE_MOUSE				FALSE	// Add support for Mouse handling functions
 #define INPUT_USE_DETECT			FALSE	// Add feature to detect device plugged in General purpose ports
@@ -252,14 +252,14 @@
 //-----------------------------------------------------------------------------
 
 // Support for integer to ASCII string converter functions
-#define STRING_USE_FROM_INT8		TRUE	// Signed 8-bits integer to string
-#define STRING_USE_FROM_UINT8		TRUE	// Unsigned 8-bits integer to string
-#define STRING_USE_FROM_INT16		TRUE	// Signed 16-bits integer to string
-#define STRING_USE_FROM_UINT16		TRUE	// Unsigned 16-bits integer to string
+#define STRING_USE_FROM_INT8		FALSE	// Signed 8-bits integer to string
+#define STRING_USE_FROM_UINT8		FALSE	// Unsigned 8-bits integer to string
+#define STRING_USE_FROM_INT16		FALSE	// Signed 16-bits integer to string
+#define STRING_USE_FROM_UINT16		FALSE	// Unsigned 16-bits integer to string
 
 // Support for sprintf style formating function
 #define STRING_USE_FORMAT			TRUE
-#define STRING_USE_INT32			TRUE	// Add support for 32-bits integer
+#define STRING_USE_INT32			FALSE	// Add support for 32-bits integer
 
 //-----------------------------------------------------------------------------
 // SCROLL MODULE 
