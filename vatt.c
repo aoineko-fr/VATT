@@ -25,7 +25,7 @@
 //-----------------------------------------------------------------------------
 
 // Version
-#define APP_VERSION					"1.3"
+#define APP_VERSION					"1.4"
 
 // VRAM access counter
 #define TEST_COUNT					256
@@ -289,21 +289,21 @@ const u8 g_ModeLimitMSX2[numberof(g_Mode)] = { 20, 15, 15, 15, 20, 15, 15, 15, 1
 const bool g_DefaultTestMSX1[numberof(g_Time)] =
 {
 	TRUE,	// 12 TS - out(n),a
-	TRUE,	// 14 TS - out(c),a
-	TRUE,	// 17 TS - out(n),a; nop
-	TRUE,	// 18 TS - outi
+	FALSE,	// 14 TS - out(c),a
+	FALSE,	// 17 TS - out(n),a; nop
+	FALSE,	// 18 TS - outi
 	FALSE,	// 19 TS - out(c),a; nop
 	FALSE,	// 20 TS - out(n),a; cp(hl)
 	FALSE,	// 21 TS - out(c),a; inc de
-	FALSE,	// 22 TS - out(c),a; cp(hl)
-	FALSE,	// 23 TS - otir
-	FALSE,	// 24 TS - out(n),a; inc(hl)
-	FALSE,	// 25 TS - outi; inc de
+	TRUE,	// 22 TS - out(c),a; cp(hl)
+	TRUE,	// 23 TS - otir
+	TRUE,	// 24 TS - out(n),a; inc(hl)
+	TRUE,	// 25 TS - outi; inc de
 	TRUE,	// 26 TS - out(n),a; djnz
 	TRUE,	// 27 TS - out(n),a;cp();inc de
 	TRUE,	// 28 TS - out(n),a; cp(hl) x 2
 	TRUE,	// 29 TS - outi; jp nz
-	TRUE,	// 30 TS - out(c),a; cp(hl) x 2
+	FALSE,	// 30 TS - out(c),a; cp(hl) x 2
 	// FALSE,	// 31 TS - out(n),a; nop; djnz
 };
 
