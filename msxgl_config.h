@@ -178,6 +178,20 @@
 #define PRINT_HEIGHT				PRINT_HEIGHT_1
 
 //-----------------------------------------------------------------------------
+// SPRITE FX MODULE
+//-----------------------------------------------------------------------------
+
+// Supported sprite size
+#define SPRITEFX_USE_8x8			TRUE	// Use 8x8 pixels effects
+#define SPRITEFX_USE_16x16			TRUE	// Use 16x16 pixels effects
+
+// Supported effect
+#define SPRITEFX_USE_CROP			TRUE	// Use cropping effect
+#define SPRITEFX_USE_FLIP			TRUE	// Use flipping effect
+#define SPRITEFX_USE_MASK			TRUE	// Use masking effect
+#define SPRITEFX_USE_ROTATE			TRUE	// Use rotating effect
+
+//-----------------------------------------------------------------------------
 // GAME MODULE
 //-----------------------------------------------------------------------------
 
@@ -224,28 +238,31 @@
 
 #define MENU_USE_DEFAULT_CALLBACK	TRUE	// Use default input/print callback
 #define MENU_SCREEN_WIDTH			40		// Screen width
-#define MENU_CLEAR					0		// Clear character
-#define MENU_POS_X					0		// Frame position X
-#define MENU_POS_Y					6		// Frame position Y
-#define MENU_WIDTH					40		// Frame width
-#define MENU_HEIGHT					8		// Frame height
-#define MENU_CHAR_CURSOR			0x8A	// Cursor charactter
-#define MENU_CHAR_TRUE				0x0C	// True charactter
-#define MENU_CHAR_FALSE				0x0B	// False charactter
-#define MENU_CHAR_LEFT				0x81	// Left edit charactter
-#define MENU_CHAR_RIGHT				0x80	// Right edit charactter
+#define MENU_FRAME_X				0		// Frame position X
+#define MENU_FRAME_Y				6		// Frame position Y
+#define MENU_FRAME_WIDTH			40		// Frame width
+#define MENU_FRAME_HEIGHT			8		// Frame height
+#define MENU_CHAR_CLEAR				0x00	// Clear character
+#define MENU_CHAR_CURSOR			0x8A	// Cursor character
+#define MENU_CHAR_TRUE				0x0C	// True character
+#define MENU_CHAR_FALSE				0x0B	// False character
+#define MENU_CHAR_LEFT				0x81	// Left edit character
+#define MENU_CHAR_RIGHT				0x80	// Right edit character
+#define MENU_TITLE_X				0		// Title position X
+#define MENU_TITLE_Y				0		// Title position Y
+#define MENU_ITEM_X					1		// Item label X position
+#define MENU_ITEM_Y					6		// Item label X position
+#define MENU_ITEM_X_GOTO			1		// Goto type item label X position
+#define MENU_ITEM_ALIGN				MENU_ITEM_ALIGN_LEFT // Item label alignment
+#define MENU_ITEM_ALIGN_GOTO		MENU_ITEM_ALIGN_LEFT // Goto type item label alignment
+#define MENU_VALUE_X				11		// Item value X position
 // Type of cursor
 // - MENU_CURSOR_MODE_NONE			No cursor
 // - MENU_CURSOR_MODE_CHAR			Character cursor
 // - MENU_CURSOR_MODE_SPRT			Sprite cursor
 #define MENU_CURSOR_MODE			MENU_CURSOR_MODE_CHAR
 #define MENU_CURSOR_OFFSET			(-1)	// Cursor X position offset
-#define MENU_ITEM_X					1		// Item label X position
-#define MENU_ITEM_X_GOTO			1		// Goto type item label X position
-#define MENU_ITEM_ALIGN				MENU_ITEM_ALIGN_LEFT // Item label alignment
-#define MENU_ITEM_ALIGN_GOTO		MENU_ITEM_ALIGN_LEFT // Goto type item label alignment
-#define MENU_VALUE_X				11		// Item value X position
-#define MENU_USE_DYNAMIC_STATE		FALSE	//
+
 
 //-----------------------------------------------------------------------------
 // STRING MODULE
@@ -260,6 +277,7 @@
 // Support for sprintf style formating function
 #define STRING_USE_FORMAT			TRUE
 #define STRING_USE_INT32			FALSE	// Add support for 32-bits integer
+
 
 //-----------------------------------------------------------------------------
 // SCROLL MODULE 
@@ -413,6 +431,12 @@
 #define PAC_USE_SIGNATURE			TRUE	// Handle application signature to validate saved data
 #define PAC_USE_VALIDATOR			TRUE	// Add code to validate input parameters 
 #define PAC_DEVICE_MAX				4		// Maximum number of supported PAC devices
+// SRAM access method
+// - PAC_ACCESS_DIRECT ............ Direct access to SRAM (must be selected in page 1)
+// - PAC_ACCESS_BIOS .............. Access through BIOS routines
+// - PAC_ACCESS_SWITCH_BIOS ....... Access through BIOS routines with BIOS switched in
+// - PAC_ACCESS_SYSTEM ............ Access through MSXgl routine (no need BIOS)
+#define PAC_ACCESS					PAC_ACCESS_BIOS
 
 //-----------------------------------------------------------------------------
 // DEBUG

@@ -27,7 +27,7 @@ Emulator = `${ToolsDir}OpenMSX/openmsx`;
 // DoMake    = true;	//-- Link all the project and engine source code (boolean). Merge all REL into one IHX file
 // DoPackage = true;	//-- Generate final binary file (boolean). Binarize the IHX file
 // DoDeploy  = true;	//-- Gathering of all files necessary for the program to work (boolean). Depends on the type of target
-DoRun     = false;	//-- Start the program automatically at the end of the build (boolean)
+// DoRun     = false;	//-- Start the program automatically at the end of the build (boolean)
 
 //*****************************************************************************
 // PROJECT SETTINGS
@@ -43,7 +43,7 @@ ProjModules = [ "test", ProjName ];
 // ProjSegments = "";
 
 //-- List of library modules to build (array)
-LibModules = [ "string", "fsm", "game_menu", "bios", "vdp", "print", "input", "memory" ];
+LibModules = [ "string", "fsm", "game_menu", "bios", "system", "vdp", "print", "input", "memory" ];
 
 //-- Additional sources to be compiled and linked with the project (array)
 // AddSources = [];
@@ -143,6 +143,9 @@ Debug = true;
 //-- Move debug symbols to deployement folder (boolean)
 DebugSymbols = true;
 
+//-- Allow compiler to generate undocumented Z80 instructions (boolean)
+// AllowUndocumented = true;
+
 //-- Assembler code optimizer (string)
 //   - None
 //   - Peep       SDCC peep hole otpimizer
@@ -154,6 +157,14 @@ DebugSymbols = true;
 //   - Speed
 //   - Size
 // Optim = "Speed";
+
+//-- Code optimization priority (string/integer)
+//   - Fast			    2000
+//   - Default		    3000
+//   - Optimized	   50000
+//   - Ultra		  200000
+//   - Insane		10000000
+CompileComplexity = "Optimized";
 
 //-- Additionnal compilation options (string)
 // CompileOpt = "";

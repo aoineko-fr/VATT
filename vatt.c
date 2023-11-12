@@ -25,7 +25,7 @@
 //-----------------------------------------------------------------------------
 
 // Version
-#define APP_VERSION					"1.4"
+#define APP_VERSION					"1.5"
 
 // VRAM access counter
 #define TEST_COUNT					256
@@ -1001,9 +1001,9 @@ void State_Report_Begin()
 {
 	DisplayHeader();
 	Print_SetPosition(1, 5);
-	Print_DrawFormat("Count:%sx%i Screen:%c", g_IterationText[g_IterationCount], TEST_COUNT, g_DisplayScreen ? 0x0C : 0x0B);
+	Print_DrawFormat("Count:%sx%i Scr:%c VSyn:%c", g_IterationText[g_IterationCount], TEST_COUNT, g_DisplayScreen ? 0x0C : 0x0B, g_WaitVSynch ? 0x0C : 0x0B);
 	if(g_VDP > VDP_VERSION_TMS9918A)
-		Print_DrawFormat(" Sprite:%c Cmd:%c", g_DisplaySprite ? 0x0C : 0x0B, g_ExecCommand ? 0x0C : 0x0B);
+		Print_DrawFormat(" Sprt:%c Cmd:%c", g_DisplaySprite ? 0x0C : 0x0B, g_ExecCommand ? 0x0C : 0x0B);
 
 	u8 x = 4;
 	u8 y = 7;
