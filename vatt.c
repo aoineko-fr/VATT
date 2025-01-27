@@ -25,13 +25,16 @@
 //-----------------------------------------------------------------------------
 
 // Version
-#define APP_VERSION					"1.5"
+#define APP_VERSION					"1.7"
 
 // VRAM access counter
 #define TEST_COUNT					256
 
 // Size of the register-edit table
 #define REG_EDIT_NUM				10
+
+// RAM function address
+#define RAM_FUNC					0xD800
 
 //-----------------------------------------------------------------------------
 // Defines and enums
@@ -84,6 +87,7 @@ struct TestTime
 {
 	cbTest    Function;				// Test function pointer
 	u8        Time;					// I/O access interval
+	u16*	  Size;					// Test function size
 	const c8* Text;					// Description
 };
 
@@ -127,6 +131,26 @@ void State_Menu_Update();
 void State_Report_Begin();
 void State_Report_Update();
 
+// Reset report result
+void ResetReport();
+
+extern u16 Test_12_length;
+extern u16 Test_14_length;
+extern u16 Test_17_length;
+extern u16 Test_18_length;
+extern u16 Test_19_length;
+extern u16 Test_20_length;
+extern u16 Test_21_length;
+extern u16 Test_22_length;
+extern u16 Test_23_length;
+extern u16 Test_24_length;
+extern u16 Test_25_length;
+extern u16 Test_26_length;
+extern u16 Test_27_length;
+extern u16 Test_28_length;
+extern u16 Test_29_length;
+extern u16 Test_30_length;
+
 //=============================================================================
 // READ-ONLY DATA
 //=============================================================================
@@ -137,22 +161,22 @@ void State_Report_Update();
 // Test speed
 const struct TestTime g_Time[] =
 {
-	{ Test_12, 12, "12: out(n),a"               },
-	{ Test_14, 14, "14: out(c),a"               },
-	{ Test_17, 17, "17: out(n),a; nop"          },
-	{ Test_18, 18, "18: outi"                   },
-	{ Test_19, 19, "19: out(c),a; nop"          },
-	{ Test_20, 20, "20: out(n),a; cp(hl)"       },
-	{ Test_21, 21, "21: out(c),a; inc de"       },
-	{ Test_22, 22, "22: out(c),a; cp(hl)"       },
-	{ Test_23, 23, "23: otir"                   },
-	{ Test_24, 24, "24: out(n),a; inc(hl)"      },
-	{ Test_25, 25, "25: outi; inc de"           },
-	{ Test_26, 26, "26: out(n),a; djnz"         },
-	{ Test_27, 27, "27: out(n),a;cp(hl);inc de" },
-	{ Test_28, 28, "28: out(n),a; cp(hl) x 2"   },
-	{ Test_29, 29, "29: outi; jp nz"            },
-	{ Test_30, 30, "30: out(c),a; cp(hl) x 2"   },
+	{ Test_12, 12, &Test_12_length, "12: out(n),a"               },
+	{ Test_14, 14, &Test_14_length, "14: out(c),a"               },
+	{ Test_17, 17, &Test_17_length, "17: out(n),a; nop"          },
+	{ Test_18, 18, &Test_18_length, "18: outi"                   },
+	{ Test_19, 19, &Test_19_length, "19: out(c),a; nop"          },
+	{ Test_20, 20, &Test_20_length, "20: out(n),a; cp(hl)"       },
+	{ Test_21, 21, &Test_21_length, "21: out(c),a; inc de"       },
+	{ Test_22, 22, &Test_22_length, "22: out(c),a; cp(hl)"       },
+	{ Test_23, 23, &Test_23_length, "23: otir"                   },
+	{ Test_24, 24, &Test_24_length, "24: out(n),a; inc(hl)"      },
+	{ Test_25, 25, &Test_25_length, "25: outi; inc de"           },
+	{ Test_26, 26, &Test_26_length, "26: out(n),a; djnz"         },
+	{ Test_27, 27, &Test_27_length, "27: out(n),a;cp(hl);inc de" },
+	{ Test_28, 28, &Test_28_length, "28: out(n),a; cp(hl) x 2"   },
+	{ Test_29, 29, &Test_29_length, "29: outi; ld i,a"           },
+	{ Test_30, 30, &Test_30_length, "30: out(c),a; cp(hl) x 2"   },
 	// { Test_31, 31, "31 TS - out(n),a; nop; djnz"  },
 };
 
@@ -198,6 +222,7 @@ const MenuItem g_MenuOption[] =
 	{ "Command",   MENU_ITEM_ACTION, MenuAction_Command, 0 },
 	{ "Quick",     MENU_ITEM_BOOL,   &g_QuickMode,       0 },
 	{ "V-Synch",   MENU_ITEM_BOOL,   &g_WaitVSynch,      0 },
+	{ "From RAM",  MENU_ITEM_BOOL,   &g_FromRAM,         0 },
 	{ "Waits TS",  MENU_ITEM_INT,    &g_TimeOffset,      0 },
 	{ "Register>", MENU_ITEM_GOTO,   NULL,               MENU_REGISTERS },
 	{ NULL,        MENU_ITEM_EMPTY,  NULL,               0 },
@@ -387,8 +412,9 @@ i8   g_TimeOffset;					// Iteration counter
 const u8* g_ModeLimit;				// Speed limit for each screen mdoe
 bool g_SelectTimes[numberof(g_Time)]; // 
 bool g_SelectModes[numberof(g_Mode)]; //
-bool g_QuickMode;
-bool g_WaitVSynch;
+bool g_QuickMode;					// Stop at the firs valid speed
+bool g_WaitVSynch;					// Wait for v-synch signal before starting access test
+bool g_FromRAM;						// Execute test function from RAM
 
 u16  g_TestTotal;					// 
 u16  g_TestMin;						// 
@@ -561,7 +587,14 @@ u8 Test(u8 mode, u8 time)
 	g_TestMin = TEST_COUNT;
 	g_TestMax = 0;
 	u8 itNum = 1 << g_IterationCount; // Compute iteration number
-	cbTest cb = g_Time[time].Function;
+	cbTest cb;
+	if (g_FromRAM)
+	{
+		Mem_Copy((const void*)g_Time[time].Function, (void*)RAM_FUNC, *g_Time[time].Size);
+		cb = (cbTest)RAM_FUNC;
+	}
+	else
+		cb = g_Time[time].Function;
 
 	// Test iteration
 	for(u8 j = 0; j < itNum; ++j)
@@ -625,6 +658,8 @@ u8 Test(u8 mode, u8 time)
 // Test all screen mode and test function
 void TestAll()
 {
+	ResetReport();
+
 	for(u8 m = 0; m < g_ModeNum; ++m)
 	{
 		if(!g_SelectModes[m])
@@ -645,13 +680,28 @@ void TestAll()
 
 //-----------------------------------------------------------------------------
 // 
-void Reset()
+void ResetReport()
 {
 	Mem_Set(0xFF, g_ReportAve, numberof(g_Time) * numberof(g_Mode));
 	Mem_Set(0xFF, g_ReportMin, numberof(g_Time) * numberof(g_Mode));
 	Mem_Set(0xFF, g_ReportMax, numberof(g_Time) * numberof(g_Mode));
+}
+
+//-----------------------------------------------------------------------------
+// 
+void Reset()
+{
+	ResetReport();
 	SetWriteVRAM(g_DestAddr);
 	Test_31(' ');
+}
+
+//-----------------------------------------------------------------------------
+// 
+void DisplayCount()
+{
+	Print_SetPosition(25, 4);
+	Print_DrawFormat("Count:%sx%i  ", g_IterationText[g_IterationCount], TEST_COUNT);
 }
 
 //-----------------------------------------------------------------------------
@@ -687,6 +737,7 @@ void DisplayHeader()
 	Print_DrawFormat("Detect: %s", GetVDPVersion());
 	if(g_VDP > VDP_VERSION_TMS9918A)
 		Print_DrawFormat(" %iHz", VDP_GetFrequency() == VDP_FREQ_50HZ ? 50 : 60);
+	DisplayCount();
 	Print_Return();
 }
 
@@ -819,10 +870,12 @@ const c8* MenuAction_Count(u8 op, i8 value)
 	case MENU_ACTION_SET:
 	case MENU_ACTION_INC:
 		g_IterationCount = (g_IterationCount + 1) % numberof(g_IterationText);
+		DisplayCount();
 		break;
 
 	case MENU_ACTION_DEC:
 		g_IterationCount = (g_IterationCount + (numberof(g_IterationText) - 1)) % numberof(g_IterationText);
+		DisplayCount();
 		break;
 	}
 
@@ -1001,7 +1054,7 @@ void State_Report_Begin()
 {
 	DisplayHeader();
 	Print_SetPosition(1, 5);
-	Print_DrawFormat("Count:%sx%i Scr:%c VSyn:%c", g_IterationText[g_IterationCount], TEST_COUNT, g_DisplayScreen ? 0x0C : 0x0B, g_WaitVSynch ? 0x0C : 0x0B);
+	Print_DrawFormat("Scr:%c VSyn:%c RAM:%c", g_DisplayScreen ? 0x0C : 0x0B, g_WaitVSynch ? 0x0C : 0x0B, g_FromRAM ? 0x0C : 0x0B);
 	if(g_VDP > VDP_VERSION_TMS9918A)
 		Print_DrawFormat(" Sprt:%c Cmd:%c", g_DisplaySprite ? 0x0C : 0x0B, g_ExecCommand ? 0x0C : 0x0B);
 
@@ -1136,6 +1189,7 @@ u8 main(u8 argc, const c8** argv)
 	g_TimeOffset = 0;
 	g_QuickMode = TRUE;
 	g_WaitVSynch = FALSE;
+	g_FromRAM = FALSE;
 	g_DestAddr = VDP_GetLayoutTable() + (40 * 17);
 	const bool* defaultTime = NULL;
 	switch(g_VDP)
