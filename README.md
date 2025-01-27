@@ -53,7 +53,7 @@ Fill instructions:
 - 26 TS - `out (n),a; djnz`
 - 27 TS - `out (n),a; cp (hl); inc de`
 - 28 TS - `out (n),a; cp (hl); cp (hl)`
-- 29 TS - `outi; jp nz`
+- 29 TS - `outi; ld i,a`
 - 30 TS - `out (c),a; cp (hl); cp (hl)`
 
 Sprites:
