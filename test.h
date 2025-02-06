@@ -15,6 +15,9 @@
 // FUNCTIONS
 //=============================================================================
 
+//  Initialize test context
+void InitializeTest();	
+
 // Set VRAM address to write in
 extern void SetWriteVRAM(u16 dest) __PRESERVES(b, c, d, e, iyl, iyh);
 

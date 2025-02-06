@@ -25,7 +25,7 @@
 //-----------------------------------------------------------------------------
 
 // Version
-#define APP_VERSION					"1.7"
+#define APP_VERSION					"1.8"
 
 // VRAM access counter
 #define TEST_COUNT					256
@@ -35,6 +35,12 @@
 
 // RAM function address
 #define RAM_FUNC					0xD800
+
+// Control character
+#define CHAR_CTRL					0x09
+
+// Test character
+#define CHAR_TEST					0x0A
 
 //-----------------------------------------------------------------------------
 // Defines and enums
@@ -604,24 +610,25 @@ u8 Test(u8 mode, u8 time)
 			VDP_CommandSTOP();
 			VDP_CommandLMMV(0, g_CommandY, 256, 256, 0x00, VDP_OP_OR); // zero-OR all the VRAM
 		}
+
+		// Write reference
+		SetWriteVRAM(g_DestAddr);
+		Test_31(CHAR_CTRL);
+
 		if(g_WaitVSynch)
 			Halt();
 
-		// Write reference
+		// Test the given writing function
 		DisableInterrupt();
 		SetWriteVRAM(g_DestAddr);
-		Test_31(0x09);
-
-		// Test the given writing function
-		SetWriteVRAM(g_DestAddr);
-		cb(0x0A);
+		cb(CHAR_TEST);
 		EnableInterrupt();
 
 		// Check result
 		u16 addr = g_DestAddr;
 		u16 count = 0;
 		for(u16 i = 0; i < TEST_COUNT; ++i)
-			if(VDP_Peek_16K(addr++) == 0x0A)
+			if(VDP_Peek_16K(addr++) == CHAR_TEST)
 				count++;
 
 		// Store total, min and max
@@ -1225,6 +1232,8 @@ u8 main(u8 argc, const c8** argv)
 
 	Reset();
 	FSM_SetState(&State_Menu);
+
+	InitializeTest();
 
 	u8 count = 0;
 	while(!Keyboard_IsKeyPressed(KEY_ESC))

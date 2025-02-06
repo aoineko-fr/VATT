@@ -22,11 +22,32 @@ F_VDP_REG	= 0x80 ;; VDP register write port (bit 7=1 in second write)
 F_VDP_VRAM	= 0x00 ;; VRAM address register (bit 7=0 in second write)
 F_VDP_WRIT	= 0x40 ;; bit 6: read/write access (1=write)
 F_VDP_READ	= 0x00 ;; bit 6: read/write access (0=read)
-RAM_BUFFER  = 0xD000
+RAM_BUFFER	= 0xD000
+CHAR_CTRL	= 0x09 ;; Control character
+CHAR_TEST	= 0x0A ;; Test character
 
 ;;=============================================================================
 ;; FUNCTIONS
 ;;=============================================================================
+
+;;-----------------------------------------------------------------------------
+;; Initialize test context
+;; void InitializeTest()
+;;-----------------------------------------------------------------------------
+_InitializeTest::
+	ld		a, #CHAR_TEST
+	call	CreateBuffer
+	ret
+
+;;-----------------------------------------------------------------------------
+;; Create buffer in RAM filled with register A's value
+CreateBuffer:
+	ld		hl, #RAM_BUFFER
+	ld		de, #RAM_BUFFER+1
+	ld		(hl), a
+	ld		bc, #TEST_COUNT-1
+	ldir
+	ret
 
 ;;-----------------------------------------------------------------------------
 ;; Set VRAM address to write in
@@ -60,16 +81,6 @@ _SetReadVRAM::
 	and		a, #0x3F				;; reset 2 MSB bits
 	; or		a, #F_VDP_READ			;; add read flag
 	out		(P_VDP_ADDR), a			;; RegPort = ((dest >> 8) & 0x3F) + F_VDP_WRIT;
-	ret
-
-;;-----------------------------------------------------------------------------
-;; Create buffer in RAM filled with register A's value
-CreateBuffer:
-	ld		hl, #RAM_BUFFER
-	ld		de, #RAM_BUFFER+1
-	ld		(hl), a
-	ld		bc, #TEST_COUNT-1
-	ldir
 	ret
 
 ;;-----------------------------------------------------------------------------
@@ -118,8 +129,6 @@ _Test_17_length::
 ;; void test_18(u8 value -> A)
 ;;-----------------------------------------------------------------------------
 _Test_18::
-	;; Create buffer in RAM
-	call	CreateBuffer
 	;; Copy to VRAM
 	ld		hl, #RAM_BUFFER
 	ld		c, #P_VDP_DATA
@@ -195,8 +204,6 @@ _Test_22_length::
 ;; void test_23(u8 value -> A)
 ;;-----------------------------------------------------------------------------
 _Test_23::
-	;; Create buffer in RAM
-	call	CreateBuffer
 	;; Copy to VRAM
 	ld		hl, #RAM_BUFFER
 	ld		b, #TEST_COUNT
@@ -227,8 +234,6 @@ _Test_24_length::
 ;; void test_25(u8 value -> A)
 ;;-----------------------------------------------------------------------------
 _Test_25::
-	;; Create buffer in RAM
-	call	CreateBuffer
 	;; Copy to VRAM
 	ld		hl, #RAM_BUFFER
 	ld		c, #P_VDP_DATA
@@ -290,8 +295,6 @@ _Test_28_length::
 ;; void test_29(u8 value -> A)
 ;;-----------------------------------------------------------------------------
 _Test_29::
-	;; Create buffer in RAM
-	call	CreateBuffer
 	;; Copy to VRAM
 	ld		hl, #RAM_BUFFER
 	ld		c, #P_VDP_DATA
