@@ -94,9 +94,11 @@ Machine = "122P";
 //   - ROM_KONAMI_SCC   .rom    Konami MegaROM SCC (aka Konami5): 8 KB segments for a total of 64 KB to 2 MB
 //   - ROM_NEO8         .rom    NEO-8: 8 KB segments for a total of 1 MB to 32 MB
 //   - ROM_NEO16        .rom    NEO-16: 16 KB segments for a total of 1 MB to 64 MB
+//   - ROM_YAMANOOTO    .rom    Yamanooto: 8 KB segments for a total up to 8 MB
+//   - ROM_ASCII16X     .rom    ASCII16-X: 16 KB segments for a total up to 64 MB
 Target = "ROM_32K";
 
-//-- ROM mapper total size in KB (number). Must be a multiple of 8 or 16 depending on the mapper type (from 64 to 4096)
+//-- ROM mapper total size in KB (number). Must be a multiple of 8 or 16 depending on the mapper type (from 64 to 4096 for legacy mappers; can be up to 65536 for NEO-16 mapper)
 // ROMSize = 0;
 
 //-- Check for ROM boot skipping if a given key is pressed (boolean)
@@ -142,7 +144,7 @@ Target = "ROM_32K";
 //-- Overwrite RAM starting address (number). For example. 0xE0000 for 8K RAM machine
 // ForceRamAddr = 0;
 
-//-- List of raw data files to be added to final binary (array). Each entry must be in the following format: { offset=0x0000, file="myfile.bin" }
+//-- List of raw data files to be added to final binary (array). Each entry must be in the following format: { offset:0x0000, file:"myfile.bin" }
 // RawFiles = [];
 
 //-- List of data files to copy to disk (array)

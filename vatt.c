@@ -464,10 +464,10 @@ void RegReset(struct RegisterEdit* reg)
 // 
 void RegApply(struct RegisterEdit* reg)
 {
-	if(!reg->Active)
+	if (!reg->Active)
 		return;
 
-	switch(reg->Type)
+	switch (reg->Type)
 	{
 	case REG_EDIT_SET:
 		VDP_RegWriteBak(reg->Number, reg->Value);
@@ -495,7 +495,7 @@ void RegApply(struct RegisterEdit* reg)
 // Get MSX version
 const c8* GetMSXVersion(u8 ver)
 {
-	switch(ver)
+	switch (ver)
 	{
 	case 0: // MSX 1
 		return "TMS9918";
@@ -512,7 +512,7 @@ const c8* GetMSXVersion(u8 ver)
 // Get VDP version
 const c8* GetVDPVersion()
 {
-	switch(g_VDP)
+	switch (g_VDP)
 	{
 	case VDP_VERSION_TMS9918A:
 		return "TMS9918";
@@ -544,19 +544,19 @@ const c8* GetStringAt(u8 x, u8 y)
 	Print_SetPosition(x, y);
 	c8* ptr = g_NameBuffer;
 	c8 chr = 0;
-	while(chr != ASCII_RETURN)
+	while (chr != ASCII_RETURN)
 	{
 		chr = GetCharacter();
-		if((chr == ASCII_BS) && (ptr > g_NameBuffer))
+		if ((chr == ASCII_BS) && (ptr > g_NameBuffer))
 		{
 			Print_Backspace(1);
 			ptr--;
 		}
 
-		if((chr == ASCII_SPACE) && (ptr == g_NameBuffer))
+		if ((chr == ASCII_SPACE) && (ptr == g_NameBuffer))
 			continue;
 
-		if((chr >= ASCII_SPACE) && (chr <= '~'))
+		if ((chr >= ASCII_SPACE) && (chr <= '~'))
 		{
 			Print_DrawChar(chr);
 			*ptr = chr;
@@ -577,7 +577,7 @@ u8 Test(u8 mode, u8 time)
 	VDP_SetSpriteAttributeTable(0x1A00);
 
 	// MSX 2/2+/turbo R
-	if(g_VDP > VDP_VERSION_TMS9918A)
+	if (g_VDP > VDP_VERSION_TMS9918A)
 	{
 		VDP_RegWrite(14, 0);
 		VDP_EnableSprite(g_DisplaySprite);
@@ -585,7 +585,7 @@ u8 Test(u8 mode, u8 time)
 	VDP_EnableDisplay(g_DisplayScreen);
 
 	// Apply register modifiers
-	for(u8 i = 0; i < REG_EDIT_NUM; ++i)
+	for (u8 i = 0; i < REG_EDIT_NUM; ++i)
 		RegApply(&g_RegEdit[i]);
 
 	// Init value
@@ -603,9 +603,9 @@ u8 Test(u8 mode, u8 time)
 		cb = g_Time[time].Function;
 
 	// Test iteration
-	for(u8 j = 0; j < itNum; ++j)
+	for (u8 j = 0; j < itNum; ++j)
 	{
-		if((g_VDP > VDP_VERSION_TMS9918A) && (g_ExecCommand > 0))
+		if ((g_VDP > VDP_VERSION_TMS9918A) && (g_ExecCommand > 0))
 		{
 			VDP_CommandSTOP();
 			VDP_CommandLMMV(0, g_CommandY, 256, 256, 0x00, VDP_OP_OR); // zero-OR all the VRAM
@@ -615,7 +615,7 @@ u8 Test(u8 mode, u8 time)
 		SetWriteVRAM(g_DestAddr);
 		Test_31(CHAR_CTRL);
 
-		if(g_WaitVSynch)
+		if (g_WaitVSynch)
 			Halt();
 
 		// Test the given writing function
@@ -627,15 +627,15 @@ u8 Test(u8 mode, u8 time)
 		// Check result
 		u16 addr = g_DestAddr;
 		u16 count = 0;
-		for(u16 i = 0; i < TEST_COUNT; ++i)
-			if(VDP_Peek_16K(addr++) == CHAR_TEST)
+		for (u16 i = 0; i < TEST_COUNT; ++i)
+			if (VDP_Peek_16K(addr++) == CHAR_TEST)
 				count++;
 
 		// Store total, min and max
 		g_TestTotal += count;
-		if(count < g_TestMin)
+		if (count < g_TestMin)
 			g_TestMin = count;
-		if(count > g_TestMax)
+		if (count > g_TestMax)
 			g_TestMax = count;
 	}
 
@@ -645,7 +645,7 @@ u8 Test(u8 mode, u8 time)
 	g_ReportMin[time][mode] = (u8)(100 * g_TestMin / TEST_COUNT);
 	g_ReportMax[time][mode] = (u8)(100 * g_TestMax / TEST_COUNT);
 
-	if(g_VDP == VDP_VERSION_TMS9918A)
+	if (g_VDP == VDP_VERSION_TMS9918A)
 		VDP_SetSpritePositionY(0, VDP_SPRITE_DISABLE_SM1);
 	else
 		VDP_EnableSprite(FALSE);
@@ -667,16 +667,16 @@ void TestAll()
 {
 	ResetReport();
 
-	for(u8 m = 0; m < g_ModeNum; ++m)
+	for (u8 m = 0; m < g_ModeNum; ++m)
 	{
-		if(!g_SelectModes[m])
+		if (!g_SelectModes[m])
 			continue;
-		for(u8 t = 0; t < numberof(g_Time); ++t)
+		for (u8 t = 0; t < numberof(g_Time); ++t)
 		{
-			if(!g_SelectTimes[t])
+			if (!g_SelectTimes[t])
 				continue;
 			u8 val = Test(m, t);
-			if(g_QuickMode && (val == 100))
+			if (g_QuickMode && (val == 100))
 				break;
 		}
 	}
@@ -731,7 +731,7 @@ void DisplayHeader()
 	// Display BIOS information
 	Print_SetPosition(1, 3);
 	Print_DrawFormat("BIOS:   %s %iHz", GetMSXVersion(biosNumber), (biosVersion & 0x80) ? 50 : 60);
-	switch(GET_VRAM_SIZE())
+	switch (GET_VRAM_SIZE())
 	{
 		case 0: Print_DrawText(" 16KB"); break;
 		case 1: Print_DrawText(" 64KB"); break;
@@ -742,7 +742,7 @@ void DisplayHeader()
 	// Display detected information
 	Print_SetPosition(1, 4);
 	Print_DrawFormat("Detect: %s", GetVDPVersion());
-	if(g_VDP > VDP_VERSION_TMS9918A)
+	if (g_VDP > VDP_VERSION_TMS9918A)
 		Print_DrawFormat(" %iHz", VDP_GetFrequency() == VDP_FREQ_50HZ ? 50 : 60);
 	DisplayCount();
 	Print_Return();
@@ -758,7 +758,7 @@ const c8* MenuAction_Mode(u8 op, i8 value)
 {
 	value;
 
-	switch(op)
+	switch (op)
 	{
 	case MENU_ACTION_SET:
 	case MENU_ACTION_INC:
@@ -779,7 +779,7 @@ const c8* MenuAction_Time(u8 op, i8 value)
 {
 	value;
 
-	switch(op)
+	switch (op)
 	{
 	case MENU_ACTION_SET:
 	case MENU_ACTION_INC:
@@ -800,7 +800,7 @@ const c8* MenuAction_Name(u8 op, i8 value)
 {
 	value;
 
-	if(op == MENU_ACTION_SET)
+	if (op == MENU_ACTION_SET)
 	{
 		Print_DrawCharXAt(12, 6, ' ', 40 - 12);
 		g_MachineName = GetStringAt(12, 6);
@@ -815,10 +815,10 @@ const c8* MenuAction_Sprite(u8 op, i8 value)
 {
 	value;
 
-	if(g_VDP == VDP_VERSION_TMS9918A)
+	if (g_VDP == VDP_VERSION_TMS9918A)
 		return "(for MSX2 or above)";
 
-	switch(op)
+	switch (op)
 	{
 	case MENU_ACTION_SET:
 	case MENU_ACTION_INC:
@@ -836,10 +836,10 @@ const c8* MenuAction_Command(u8 op, i8 value)
 {
 	value;
 
-	if(g_VDP == VDP_VERSION_TMS9918A)
+	if (g_VDP == VDP_VERSION_TMS9918A)
 		return "(for MSX2 or above)";
 
-	switch(op)
+	switch (op)
 	{
 	case MENU_ACTION_SET:
 	case MENU_ACTION_INC:
@@ -850,7 +850,7 @@ const c8* MenuAction_Command(u8 op, i8 value)
 		break;
 	}
 
-	switch(g_ExecCommand)
+	switch (g_ExecCommand)
 	{
 	case CMD_OVERLAP:
 		g_CommandY = 0;
@@ -872,7 +872,7 @@ const c8* MenuAction_Count(u8 op, i8 value)
 {
 	value;
 
-	switch(op)
+	switch (op)
 	{
 	case MENU_ACTION_SET:
 	case MENU_ACTION_INC:
@@ -893,9 +893,9 @@ const c8* MenuAction_Count(u8 op, i8 value)
 // 
 const c8* MenuAction_Test(u8 op, i8 value)
 {
-	if(op == MENU_ACTION_SET)
+	if (op == MENU_ACTION_SET)
 	{
-		switch(value)
+		switch (value)
 		{
 		case 0: // Test current config
 			Test(g_CurMode, g_CurTime);
@@ -925,7 +925,7 @@ const c8* MenuAction_Reg(u8 op, i8 value)
 {
 	struct RegisterEdit* reg = &g_RegEdit[g_RegEditIdx];
 
-	switch(value)
+	switch (value)
 	{
 	case 0: // Bit #0
 	case 1: // Bit #1
@@ -937,9 +937,9 @@ const c8* MenuAction_Reg(u8 op, i8 value)
 	case 7: // Bit #7
 	{
 		u8 flag = 1 << value;
-		if((op == MENU_ACTION_INC) || (op == MENU_ACTION_DEC) || (op == MENU_ACTION_SET))
+		if ((op == MENU_ACTION_INC) || (op == MENU_ACTION_DEC) || (op == MENU_ACTION_SET))
 		{
-			if(reg->Value & flag)
+			if (reg->Value & flag)
 				reg->Value &= ~flag;
 			else
 				reg->Value |= flag;
@@ -948,12 +948,12 @@ const c8* MenuAction_Reg(u8 op, i8 value)
 	}
 
 	case 10: // Index
-		if((g_RegEditIdx < REG_EDIT_NUM - 1) && ((op == MENU_ACTION_INC) || (op == MENU_ACTION_SET)))
+		if ((g_RegEditIdx < REG_EDIT_NUM - 1) && ((op == MENU_ACTION_INC) || (op == MENU_ACTION_SET)))
 		{
 			g_RegEditIdx++;
 			Menu_SetDirty();
 		}
-		if((g_RegEditIdx > 0) && (op == MENU_ACTION_DEC))
+		if ((g_RegEditIdx > 0) && (op == MENU_ACTION_DEC))
 		{
 			g_RegEditIdx--;
 			Menu_SetDirty();
@@ -963,17 +963,17 @@ const c8* MenuAction_Reg(u8 op, i8 value)
 
 	case 11: // Active
 	{
-		if((op == MENU_ACTION_INC) || (op == MENU_ACTION_DEC) || (op == MENU_ACTION_SET))
+		if ((op == MENU_ACTION_INC) || (op == MENU_ACTION_DEC) || (op == MENU_ACTION_SET))
 			reg->Active = !reg->Active;
 		return reg->Active ? "\x0C" : "\x0B";
 	}
 
 	case 12: // Type
-		if((reg->Type < 2) && ((op == MENU_ACTION_INC) || (op == MENU_ACTION_SET)))
+		if ((reg->Type < 2) && ((op == MENU_ACTION_INC) || (op == MENU_ACTION_SET)))
 			reg->Type++;
-		else if((reg->Type > 0) && (op == MENU_ACTION_DEC))
+		else if ((reg->Type > 0) && (op == MENU_ACTION_DEC))
 			reg->Type--;
-		switch(reg->Type)
+		switch (reg->Type)
 		{
 		case REG_EDIT_SET:	return "SET";
 		case REG_EDIT_AND:	return "AND";
@@ -982,17 +982,17 @@ const c8* MenuAction_Reg(u8 op, i8 value)
 		break;
 
 	case 13: // Register
-		if((op == MENU_ACTION_INC) || (op == MENU_ACTION_SET))
+		if ((op == MENU_ACTION_INC) || (op == MENU_ACTION_SET))
 			reg->Number++;
-		if(op == MENU_ACTION_DEC)
+		if (op == MENU_ACTION_DEC)
 			reg->Number--;
 		String_Format(g_StringBuffer, "%i", reg->Number);
 		return g_StringBuffer;
 
 	case 20: // Clear
-		if(op == MENU_ACTION_SET)
+		if (op == MENU_ACTION_SET)
 		{
-			for(u8 i = 0; i < REG_EDIT_NUM; ++i)
+			for (u8 i = 0; i < REG_EDIT_NUM; ++i)
 				RegReset(&g_RegEdit[i]);
 			Menu_SetDirty();
 		}
@@ -1042,13 +1042,13 @@ void State_Menu_Update()
 {
 	Menu_Update();
 
-	if(Keyboard_IsKeyPressed(KEY_T))
+	if (Keyboard_IsKeyPressed(KEY_T))
 		Test(g_CurMode, g_CurTime);
 
-	if(Keyboard_IsKeyPressed(KEY_E))
+	if (Keyboard_IsKeyPressed(KEY_E))
 		TestAll();
 
-	if(Keyboard_IsKeyPressed(KEY_R))
+	if (Keyboard_IsKeyPressed(KEY_R))
 	{
 		g_CurResult = &g_ReportAve;
 		FSM_SetState(&State_Report);
@@ -1062,25 +1062,25 @@ void State_Report_Begin()
 	DisplayHeader();
 	Print_SetPosition(1, 5);
 	Print_DrawFormat("Scr:%c VSyn:%c RAM:%c", g_DisplayScreen ? 0x0C : 0x0B, g_WaitVSynch ? 0x0C : 0x0B, g_FromRAM ? 0x0C : 0x0B);
-	if(g_VDP > VDP_VERSION_TMS9918A)
+	if (g_VDP > VDP_VERSION_TMS9918A)
 		Print_DrawFormat(" Sprt:%c Cmd:%c", g_DisplaySprite ? 0x0C : 0x0B, g_ExecCommand ? 0x0C : 0x0B);
 
 	u8 x = 4;
 	u8 y = 7;
 	u8 col = 0;
 	// Table
-	for(u8 t = 0; t < numberof(g_Time); ++t)
+	for (u8 t = 0; t < numberof(g_Time); ++t)
 	{
-		if(!g_SelectTimes[t]) // Skip unselected test functions
+		if (!g_SelectTimes[t]) // Skip unselected test functions
 			continue;
-		if(++col > 9)
+		if (++col > 9)
 			break;
 
 		Print_SetPosition(x, y);
 		Print_DrawFormat("%it", g_Time[t].Time + g_TimeOffset);
 		x += 4;
 	}
-	for(u8 m = 0; m < numberof(g_Mode); ++m)
+	for (u8 m = 0; m < numberof(g_Mode); ++m)
 	{
 		x = 0;
 		y = 9 + m;
@@ -1089,24 +1089,24 @@ void State_Report_Begin()
 		x += 3;
 
 		col = 0;
-		for(u8 t = 0; t < numberof(g_Time); ++t)
+		for (u8 t = 0; t < numberof(g_Time); ++t)
 		{
-			if(!g_SelectTimes[t]) // Skip unselected test functions
+			if (!g_SelectTimes[t]) // Skip unselected test functions
 				continue;
-			if(++col > 9)
+			if (++col > 9)
 				break;
 
 			Print_SetPosition(x, y);
-			if((g_Time[t].Time + g_TimeOffset >= g_ModeLimit[m]) && ((t == 0) || (g_Time[t - 1].Time + g_TimeOffset < g_ModeLimit[m])))
+			if ((g_Time[t].Time + g_TimeOffset >= g_ModeLimit[m]) && ((t == 0) || (g_Time[t - 1].Time + g_TimeOffset < g_ModeLimit[m])))
 				Print_DrawChar(0x16);
 			else
 				Print_DrawChar(0x1D);
 			x += 1;
 			Print_SetPosition(x, y);
 			u8 percentage = (*g_CurResult)[t][m];
-			if(percentage == 0xFF)
+			if (percentage == 0xFF)
 				Print_DrawText("\x7\x7\x7");
-			else if(percentage == 100)
+			else if (percentage == 100)
 				Print_DrawText("OK");
 			else
 			{
@@ -1127,23 +1127,23 @@ void State_Report_Begin()
 //
 void State_Report_Update()
 {
-	if(Keyboard_IsKeyPressed(KEY_F1))
+	if (Keyboard_IsKeyPressed(KEY_F1))
 	{
 		g_CurResult = &g_ReportAve;
 		State_Report_Begin();
 	}
-	else if(Keyboard_IsKeyPressed(KEY_F2))
+	else if (Keyboard_IsKeyPressed(KEY_F2))
 	{
 		g_CurResult = &g_ReportMin;
 		State_Report_Begin();
 	}
-	else if(Keyboard_IsKeyPressed(KEY_F3))
+	else if (Keyboard_IsKeyPressed(KEY_F3))
 	{
 		g_CurResult = &g_ReportMax;
 		State_Report_Begin();
 	}
 
-	if(Keyboard_IsKeyPressed(KEY_SPACE))
+	if (Keyboard_IsKeyPressed(KEY_SPACE))
 		FSM_SetState(&State_Menu);
 }
 
@@ -1161,7 +1161,7 @@ u8 main(u8 argc, const c8** argv)
 	g_VDP = VDP_GetVersion(); // must be called before VDP_SetMode
 	VDP_SetMode(VDP_MODE_SCREEN0);
 	VDP_ClearVRAM();
-	if(g_VDP >= VDP_VERSION_V9958)
+	if (g_VDP >= VDP_VERSION_V9958)
 		VDP_RegWriteBak(25, 0); // Reset MSX2+ R#25 register (to work around wrong MSX2+ BIOS for Omega)
 	Bios_SetKeyClick(FALSE);
 
@@ -1171,7 +1171,7 @@ u8 main(u8 argc, const c8** argv)
 
 	// Get machine name
 #if (TARGET_TYPE == TYPE_DOS)
-	if(argc > 0)
+	if (argc > 0)
 	{
 		g_MachineName = argv[0];
 	}
@@ -1199,7 +1199,7 @@ u8 main(u8 argc, const c8** argv)
 	g_FromRAM = FALSE;
 	g_DestAddr = VDP_GetLayoutTable() + (40 * 17);
 	const bool* defaultTime = NULL;
-	switch(g_VDP)
+	switch (g_VDP)
 	{
 	case VDP_VERSION_TMS9918A:
 		g_ModeNum = 4;
@@ -1220,14 +1220,14 @@ u8 main(u8 argc, const c8** argv)
 		break;
 	}
 	g_CurMode = 0;
-	for(u8 i = 0; i < numberof(g_Time); ++i)
+	for (u8 i = 0; i < numberof(g_Time); ++i)
 		g_SelectTimes[i] = defaultTime[i];
 	g_CurTime = 0;
-	for(u8 i = 0; i < numberof(g_Mode); ++i)
+	for (u8 i = 0; i < numberof(g_Mode); ++i)
 		g_SelectModes[i] = TRUE;
 
 	g_RegEditIdx = 0;
-	for(u8 i = 0; i < REG_EDIT_NUM; ++i)
+	for (u8 i = 0; i < REG_EDIT_NUM; ++i)
 		RegReset(&g_RegEdit[i]);
 
 	Reset();
@@ -1236,7 +1236,7 @@ u8 main(u8 argc, const c8** argv)
 	InitializeTest();
 
 	u8 count = 0;
-	while(!Keyboard_IsKeyPressed(KEY_ESC))
+	while (!Keyboard_IsKeyPressed(KEY_ESC))
 	{
 		// Wait V-Blank
 		Halt();
